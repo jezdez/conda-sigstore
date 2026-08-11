@@ -128,8 +128,8 @@ Verify that raw signature with the standard identity verifier:
 ```console
 sigstore verify identity \
   --bundle ./demo-package-1.0-0.conda.raw.sigstore.json \
-  --cert-identity EXPECTED_CERTIFICATE_IDENTITY \
-  --cert-oidc-issuer EXPECTED_OIDC_ISSUER \
+  --cert-identity "$EXPECTED_CERTIFICATE_IDENTITY" \
+  --cert-oidc-issuer "$EXPECTED_OIDC_ISSUER" \
   ./demo-package-1.0-0.conda
 ```
 
