@@ -91,7 +91,12 @@ class SigstoreBundleMaterial:
 
         certificate = self.bundle.signing_certificate
         extensions = certificate.extensions
-        values = extensions.get_extension_for_class(SubjectAlternativeName).value
+        try:
+            values = extensions.get_extension_for_class(SubjectAlternativeName).value
+        except ExtensionNotFound as exc:
+            raise BundleVerificationError(
+                "certificate does not contain a supported SAN"
+            ) from exc
         identities = list(values.get_values_for_type(RFC822Name))
         identities.extend(values.get_values_for_type(UniformResourceIdentifier))
         for other_name in values.get_values_for_type(OtherName):

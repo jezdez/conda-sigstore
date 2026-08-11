@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import zlib
+from types import SimpleNamespace
 
 import pytest
 
@@ -81,6 +82,26 @@ def test_verifier_programming_errors_are_not_security_results() -> None:
             artifact_sha256=DIGEST,
             verifier=verifier,
         )
+
+
+def test_bundle_certificate_requires_a_subject_alternative_name() -> None:
+    from cryptography.x509 import SubjectAlternativeName
+    from cryptography.x509.extensions import ExtensionNotFound
+
+    class ExtensionsWithoutSan:
+        def get_extension_for_class(self, extension_class):
+            assert extension_class is SubjectAlternativeName
+            raise ExtensionNotFound("extension is missing", extension_class)
+
+    material = SigstoreBundleMaterial(
+        SimpleNamespace(
+            signing_certificate=SimpleNamespace(extensions=ExtensionsWithoutSan())
+        ),
+        "{}",
+    )
+
+    with pytest.raises(BundleVerificationError, match="supported SAN"):
+        material.signer()
 
 
 def test_malformed_target_channel_does_not_hide_valid_sibling() -> None:

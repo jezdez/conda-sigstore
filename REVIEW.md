@@ -18,6 +18,7 @@ This checklist records the full repository review completed on 2026-08-11. Each 
 - [x] 9. Distinguish unavailable source evidence from invalid evidence and avoid exposing raw parser input in failures.
 - [x] 10. Replace broad orchestration catches with the domain exceptions expected at each boundary.
 - [x] 11. Align draft repodata transport result statuses with the current proposal.
+- [x] 21. Report a bundle certificate without a supported Subject Alternative Name as invalid evidence.
 
 ## Structure and dependency boundaries
 
