@@ -1,0 +1,41 @@
+# Code review findings
+
+This checklist records the full repository review completed on 2026-08-11. Each numbered item is resolved in its own commit. Items that depend on unreleased conda work are fixed locally by removing claims that the unavailable behavior works and retaining only code that can be tested honestly.
+
+## Release contract
+
+- [ ] 1. Stop registering or documenting install enforcement until conda provides both the package-verifier hook and opaque `PackageRecord.attestations` preservation. Replace simulated future-hook tests with tests of the currently supported entry point.
+
+## Correctness and security
+
+- [ ] 2. Make `targetChannel` validation conditional on the caller supplying an expected channel while retaining the explicit requirement mode.
+- [ ] 3. Commit attestation output atomically without replacing a destination created during signing.
+- [ ] 4. Convert expected command failures to a dedicated `CondaError` while preserving transport failure codes and leaving programming errors visible.
+- [ ] 5. Detect an artifact that changes during direct verification.
+- [ ] 6. Require SHA-256 values to contain exactly 64 hexadecimal characters.
+- [ ] 7. Select only the exact retained package filename during audit.
+- [ ] 8. Parse sidecars and statements as strict UTF-8 JSON and reject nonstandard numeric constants.
+- [ ] 9. Distinguish unavailable source evidence from invalid evidence and avoid exposing raw parser input in failures.
+- [ ] 10. Replace broad orchestration catches with the domain exceptions expected at each boundary.
+- [ ] 11. Align draft repodata transport result statuses with the current proposal.
+
+## Structure and dependency boundaries
+
+- [ ] 12. Delete unused receipt-era verifier state and private Sigstore configuration access.
+- [ ] 13. Declare directly imported dependencies and document dependencies supplied by conda.
+- [ ] 14. Bound trust configuration and source archive input before parsing.
+- [ ] 15. Resolve the unused cache-lock seam by using conda's disk lock for production writes or documenting and simplifying the atomic content-addressed design.
+- [ ] 16. Move draft embedded source-attestation behavior out of `audit.py` into one cohesive module.
+- [ ] 17. Remove unused internal surfaces and align entry-point, prefix resolution, and Sphinx setup with the peer plugins.
+
+## Tests, CI, and documentation
+
+- [ ] 18. Add real installed-entry-point command coverage and retain the unavailable transaction matrix as an explicit upstream prerequisite.
+- [ ] 19. Run coverage in one CI matrix job and publish the report.
+- [ ] 20. Correct install, sidecar digest, offline cache, tutorial, and Prefix workflow documentation.
+
+## Baseline
+
+- Normal suite: 116 passed, 2 live interoperability tests deselected.
+- Measured coverage: 81 percent.
+- Ruff, formatting, ty, Pixi lock validation, strict Sphinx, actionlint, and package builds passed.
