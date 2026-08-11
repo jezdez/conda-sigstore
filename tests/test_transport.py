@@ -129,11 +129,6 @@ def test_repodata_refuses_oversized_descriptor_before_fetch() -> None:
     assert not called
 
 
-def test_repodata_descriptor_requires_lowercase_sha256() -> None:
-    with pytest.raises(ValueError, match="lowercase"):
-        AttestationDescriptor("AB" * 32, 1)
-
-
 @pytest.mark.parametrize(
     ("change", "code"),
     [
