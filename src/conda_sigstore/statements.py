@@ -11,8 +11,8 @@ from urllib.parse import SplitResult, urlsplit, urlunsplit
 
 from conda.common.url import split_anaconda_token
 
+from .evidence import validate_sha256
 from .exceptions import PublishStatementError, StatementError
-from .model import validate_sha256
 
 if TYPE_CHECKING:
     from typing import NoReturn

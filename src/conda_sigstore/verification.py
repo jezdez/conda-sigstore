@@ -6,24 +6,25 @@ import hmac
 import json
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
+from functools import cache
 from threading import Lock
 from typing import TYPE_CHECKING, Protocol
 
 from conda.gateways.disk.read import compute_sum
 
-from .exceptions import (
-    BundleVerificationError,
-    PublishStatementError,
-    StatementError,
-    TrustMaterialUnavailableError,
-)
-from .model import (
+from .evidence import (
     AuthorizationStatus,
     SignerIdentity,
     VerificationFailure,
     VerificationResult,
     VerificationStatus,
     VerifiedEvidence,
+)
+from .exceptions import (
+    BundleVerificationError,
+    PublishStatementError,
+    StatementError,
+    TrustMaterialUnavailableError,
 )
 from .provenance import SlsaProvenance
 from .settings import MAX_TRUST_CONFIG_BYTES
@@ -34,7 +35,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any
 
-    from .model import Sidecar
+    from .evidence import Sidecar
 
 
 @dataclass(frozen=True, slots=True)
@@ -202,6 +203,17 @@ class SigstoreVerifier:
         self._verifier = verifier
         self._trust_model: Any | None = None
         self._initialization_lock = Lock()
+
+    @classmethod
+    @cache
+    def shared(
+        cls,
+        *,
+        offline: bool,
+        trust_config: Path | None,
+    ) -> SigstoreVerifier:
+        """Reuse one thread-safe verifier for matching process configuration."""
+        return cls(offline=offline, trust_config=trust_config)
 
     @property
     def trust_model(self) -> Any:

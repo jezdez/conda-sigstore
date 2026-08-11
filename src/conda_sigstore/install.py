@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .audit import EnvironmentAuditor
-from .model import validate_sha256
+from .evidence import validate_sha256
 
 if TYPE_CHECKING:
     from conda.common.path import PathType

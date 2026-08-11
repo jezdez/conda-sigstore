@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from conda_sigstore.model import (
+from conda_sigstore.evidence import (
     AttestationDescriptor,
     VerificationResult,
     VerificationStatus,

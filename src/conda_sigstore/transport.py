@@ -11,15 +11,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit, urlunsplit
 
+from .evidence import Sidecar
 from .exceptions import TransportError
-from .model import Sidecar
 from .settings import DEFAULT_MAX_SIDECAR_BYTES
 
 if TYPE_CHECKING:
     from typing import NoReturn
 
     from .cache import DigestCache
-    from .model import AttestationDescriptor
+    from .evidence import AttestationDescriptor
 
 
 Fetch = Callable[[str, int], bytes]

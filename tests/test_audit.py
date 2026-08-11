@@ -10,15 +10,15 @@ from conda.exceptions import CondaError
 
 from conda_sigstore.audit import EnvironmentAuditor
 from conda_sigstore.cache import DigestCache
+from conda_sigstore.evidence import (
+    SignerIdentity,
+    VerificationResult,
+    VerificationStatus,
+)
 from conda_sigstore.exceptions import (
     BundleVerificationError,
     TransportError,
     TrustMaterialUnavailableError,
-)
-from conda_sigstore.model import (
-    SignerIdentity,
-    VerificationResult,
-    VerificationStatus,
 )
 from conda_sigstore.settings import SigstoreSettings
 from conda_sigstore.source_attestations import (
@@ -361,7 +361,7 @@ def test_invalid_extra_indexed_bundle_fails_closed(
         monkeypatch,
         tmp_path,
         rendered_recipe=recipe(
-            [{"identity": identity.identity, "issuer": identity.issuer}],
+            [identity.to_dict()],
             [indexed_bundle(good_path, good), indexed_bundle(bad_path, bad)],
         ),
         bundle_files={good_path: good, bad_path: bad},
@@ -384,7 +384,7 @@ def test_missing_indexed_bundle_fails_closed(
         monkeypatch,
         tmp_path,
         rendered_recipe=recipe(
-            [{"identity": identity.identity, "issuer": identity.issuer}],
+            [identity.to_dict()],
             [indexed_bundle(path, body)],
         ),
         bundle_files={},
@@ -453,7 +453,7 @@ def test_enforces_payload_predicate_and_source_binding(
         monkeypatch,
         tmp_path,
         rendered_recipe=recipe(
-            [{"identity": identity.identity, "issuer": identity.issuer}],
+            [identity.to_dict()],
             [indexed_bundle(path, body)],
         ),
         bundle_files={path: body},
@@ -510,7 +510,7 @@ def test_enforces_embedded_bundle_size_limit(
         monkeypatch,
         tmp_path,
         rendered_recipe=recipe(
-            [{"identity": identity.identity, "issuer": identity.issuer}],
+            [identity.to_dict()],
             [indexed_bundle(path, body)],
         ),
         bundle_files={path: body},
@@ -537,7 +537,7 @@ def test_bounds_rendered_recipe_before_parsing(
         monkeypatch,
         tmp_path,
         rendered_recipe=recipe(
-            [{"identity": identity.identity, "issuer": identity.issuer}],
+            [identity.to_dict()],
             [indexed_bundle(path, body)],
         ),
         bundle_files={path: body},

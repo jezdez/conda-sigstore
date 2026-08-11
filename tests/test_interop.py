@@ -8,7 +8,7 @@ import pytest
 from conda.gateways.disk.read import compute_sum
 
 from conda_sigstore.attestation import create_attestation
-from conda_sigstore.model import Sidecar, VerificationStatus
+from conda_sigstore.evidence import Sidecar, VerificationStatus
 from conda_sigstore.transport import SidecarTransport
 from conda_sigstore.verification import SigstoreVerifier, verify_bundles
 

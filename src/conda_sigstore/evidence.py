@@ -66,6 +66,9 @@ class SignerIdentity:
         if not isinstance(self.issuer, str) or not self.issuer:
             raise ValueError("signer issuer cannot be empty")
 
+    def to_dict(self) -> dict[str, str]:
+        return {"identity": self.identity, "issuer": self.issuer}
+
 
 class VerificationStatus(str, Enum):
     """Stable statuses used by human and JSON output."""
@@ -177,10 +180,7 @@ class VerificationResult:
             "status": self.status.value,
             "authorization": self.authorization.value,
             "expected_signer": (
-                {
-                    "identity": self.expected_signer.identity,
-                    "issuer": self.expected_signer.issuer,
-                }
+                self.expected_signer.to_dict()
                 if self.expected_signer is not None
                 else None
             ),

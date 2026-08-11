@@ -3,47 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
 
 from .exceptions import ProvenanceError
 
 if TYPE_CHECKING:
     from .statements import InTotoStatement
-
-
-@dataclass(frozen=True, slots=True)
-class ProvenanceMaterial:
-    uri: str
-    digest: Mapping[str, str] = field(default_factory=dict)
-
-    @classmethod
-    def from_mapping(cls, value: object, index: int) -> ProvenanceMaterial:
-        if not isinstance(value, Mapping):
-            raise ProvenanceError(f"resolvedDependencies[{index}] must be an object")
-        uri = value.get("uri")
-        if not isinstance(uri, str) or not uri:
-            raise ProvenanceError(
-                f"resolvedDependencies[{index}].uri must be a nonempty string"
-            )
-        raw_digest = value.get("digest", {})
-        if not isinstance(raw_digest, Mapping):
-            raise ProvenanceError(
-                f"resolvedDependencies[{index}].digest must be an object"
-            )
-        digest: dict[str, str] = {}
-        for algorithm, digest_value in raw_digest.items():
-            if (
-                not isinstance(algorithm, str)
-                or not isinstance(digest_value, str)
-                or not digest_value
-            ):
-                raise ProvenanceError("material digests must map strings to strings")
-            digest[algorithm] = digest_value
-        return cls(uri, digest)
-
-    def to_dict(self) -> dict[str, object]:
-        return {"uri": self.uri, "digest": dict(self.digest)}
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,7 +21,7 @@ class SlsaProvenance:
     builder_id: str
     build_type: str
     invocation_id: str | None
-    materials: tuple[ProvenanceMaterial, ...]
+    materials: tuple[tuple[str, Mapping[str, str]], ...]
     external_parameters: Mapping[str, object]
     internal_parameters: Mapping[str, object]
     started_on: str | None
@@ -104,10 +70,34 @@ class SlsaProvenance:
             (str, bytes, bytearray),
         ):
             raise ProvenanceError("resolvedDependencies must be a list")
-        materials = tuple(
-            ProvenanceMaterial.from_mapping(value, index)
-            for index, value in enumerate(dependencies)
-        )
+        materials: list[tuple[str, Mapping[str, str]]] = []
+        for index, dependency in enumerate(dependencies):
+            if not isinstance(dependency, Mapping):
+                raise ProvenanceError(
+                    f"resolvedDependencies[{index}] must be an object"
+                )
+            uri = dependency.get("uri")
+            if not isinstance(uri, str) or not uri:
+                raise ProvenanceError(
+                    f"resolvedDependencies[{index}].uri must be a nonempty string"
+                )
+            raw_digest = dependency.get("digest", {})
+            if not isinstance(raw_digest, Mapping):
+                raise ProvenanceError(
+                    f"resolvedDependencies[{index}].digest must be an object"
+                )
+            digest: dict[str, str] = {}
+            for algorithm, digest_value in raw_digest.items():
+                if (
+                    not isinstance(algorithm, str)
+                    or not isinstance(digest_value, str)
+                    or not digest_value
+                ):
+                    raise ProvenanceError(
+                        "material digests must map strings to strings"
+                    )
+                digest[algorithm] = digest_value
+            materials.append((uri, digest))
 
         external_parameters = build_definition.get("externalParameters", {})
         if not isinstance(external_parameters, Mapping):
@@ -120,7 +110,7 @@ class SlsaProvenance:
             builder_id=builder_id,
             build_type=build_type,
             invocation_id=optional_strings["invocationId"],
-            materials=materials,
+            materials=tuple(materials),
             external_parameters=external_parameters,
             internal_parameters=internal_parameters,
             started_on=optional_strings["startedOn"],
@@ -133,7 +123,9 @@ class SlsaProvenance:
             "build_type": self.build_type,
             "invocation": self.invocation_id,
             "source": None,
-            "materials": [material.to_dict() for material in self.materials],
+            "materials": [
+                {"uri": uri, "digest": dict(digest)} for uri, digest in self.materials
+            ],
             "external_parameters": dict(self.external_parameters),
             "internal_parameters": dict(self.internal_parameters),
             "started_on": self.started_on,

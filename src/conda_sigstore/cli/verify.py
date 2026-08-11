@@ -11,8 +11,8 @@ from conda.models.channel import Channel
 from rich.console import Console
 from rich.text import Text
 
+from ..evidence import SignerIdentity
 from ..exceptions import CondaSigstoreError, TransportError
-from ..model import SignerIdentity
 from ..settings import SigstoreSettings
 from ..transport import SidecarTransport
 from ..verification import SigstoreVerifier, verify_artifact

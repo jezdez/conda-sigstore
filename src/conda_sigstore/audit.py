@@ -14,14 +14,14 @@ from urllib.parse import urlsplit
 from conda.gateways.disk.read import compute_sum
 
 from .cache import DigestCache
-from .exceptions import TransportError
-from .model import (
+from .evidence import (
     AttestationDescriptor,
     VerificationFailure,
     VerificationResult,
     VerificationStatus,
     validate_sha256,
 )
+from .exceptions import TransportError
 from .settings import SigstoreSettings
 from .source_attestations import SourceAttestationRequirement, resolve_embedded_file
 from .transport import (
@@ -72,7 +72,7 @@ class EnvironmentAuditor:
             cache = None
         return cls(
             settings=settings,
-            verifier=SigstoreVerifier(
+            verifier=SigstoreVerifier.shared(
                 offline=context.offline,
                 trust_config=settings.trust_config,
             ),

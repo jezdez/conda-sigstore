@@ -20,15 +20,15 @@ from cryptography.x509.oid import ExtensionOID
 from pyasn1.codec.der.encoder import encode as der_encode
 from pyasn1.type.char import UTF8String
 
-from conda_sigstore.exceptions import (
-    BundleVerificationError,
-    TrustMaterialUnavailableError,
-)
-from conda_sigstore.model import (
+from conda_sigstore.evidence import (
     AuthorizationStatus,
     Sidecar,
     SignerIdentity,
     VerificationStatus,
+)
+from conda_sigstore.exceptions import (
+    BundleVerificationError,
+    TrustMaterialUnavailableError,
 )
 from conda_sigstore.provenance import SlsaProvenance
 from conda_sigstore.statements import InTotoStatement, PublishStatement
@@ -446,10 +446,7 @@ def test_explicit_identity_rejects_other_signer_without_hiding_evidence(
 
     assert result.status is VerificationStatus.UNTRUSTED_IDENTITY
     assert result.authorization is AuthorizationStatus.FAILED
-    assert result.to_dict()["expected_signer"] == {
-        "identity": expected_signer.identity,
-        "issuer": expected_signer.issuer,
-    }
+    assert result.to_dict()["expected_signer"] == expected_signer.to_dict()
     assert result.evidence[0].verified
     assert result.evidence[0].identity == IDENTITY
     assert result.evidence[0].issuer == ISSUER

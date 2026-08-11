@@ -10,7 +10,7 @@ from pathlib import Path
 from conda.exceptions import LockError
 from conda.gateways.disk.lock import LOCK_BYTE, lock
 
-from .model import validate_sha256
+from .evidence import validate_sha256
 from .settings import DEFAULT_MAX_SIDECAR_BYTES
 
 
@@ -23,7 +23,6 @@ class DigestCache:
     def _atomic_write(self, path: Path, data: bytes) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         lock_path = self.root / ".write-lock"
-        lock_path.parent.mkdir(parents=True, exist_ok=True)
         with lock_path.open("a+b") as lock_file:
             lock_file.seek(0, os.SEEK_END)
             if lock_file.tell() <= LOCK_BYTE:

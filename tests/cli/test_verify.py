@@ -6,14 +6,14 @@ from types import SimpleNamespace
 import pytest
 
 import conda_sigstore.cli.verify as cli_verify
-from conda_sigstore.exceptions import CondaSigstoreError, TransportError
-from conda_sigstore.model import (
+from conda_sigstore.evidence import (
     AuthorizationStatus,
     Sidecar,
     VerificationResult,
     VerificationStatus,
     VerifiedEvidence,
 )
+from conda_sigstore.exceptions import CondaSigstoreError, TransportError
 
 
 def test_verify_json_passes_explicit_signer_requirement(

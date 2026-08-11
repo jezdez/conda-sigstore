@@ -10,8 +10,8 @@ import conda.gateways.connection.session
 import pytest
 
 from conda_sigstore.cache import DigestCache
+from conda_sigstore.evidence import AttestationDescriptor
 from conda_sigstore.exceptions import TransportError
-from conda_sigstore.model import AttestationDescriptor
 from conda_sigstore.transport import SidecarTransport
 
 if TYPE_CHECKING:

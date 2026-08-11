@@ -2,21 +2,24 @@ from __future__ import annotations
 
 import hashlib
 import json
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
+import conda.base.context
 import pytest
+from conda.core.package_cache_data import PackageCacheData
 from conda.exceptions import CondaVerificationError
 from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
 
 from conda_sigstore.audit import EnvironmentAuditor
+from conda_sigstore.evidence import SignerIdentity
 from conda_sigstore.exceptions import BundleVerificationError, TransportError
 from conda_sigstore.install import InstallVerifier
-from conda_sigstore.model import SignerIdentity
 from conda_sigstore.settings import SigstoreSettings
 from conda_sigstore.statements import InTotoStatement, PublishStatement
 from conda_sigstore.transport import SidecarTransport
-from conda_sigstore.verification import CryptographicVerification
+from conda_sigstore.verification import CryptographicVerification, SigstoreVerifier
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -74,6 +77,38 @@ def verified_publication() -> CryptographicVerification:
         IDENTITY.issuer,
         ("signed-time",),
     )
+
+
+def test_current_install_verifiers_share_sigstore_trust(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(
+        conda.base.context,
+        "context",
+        SimpleNamespace(offline=False),
+    )
+    monkeypatch.setattr(
+        SigstoreSettings,
+        "current",
+        classmethod(lambda cls: cls()),
+    )
+    monkeypatch.setattr(
+        PackageCacheData,
+        "first_writable",
+        classmethod(lambda _cls: SimpleNamespace(pkgs_dir=tmp_path)),
+    )
+    SigstoreVerifier.shared.cache_clear()
+
+    first = InstallVerifier.current()
+    second = InstallVerifier.current()
+    conda.base.context.context.offline = True
+    offline = InstallVerifier.current()
+
+    assert first is not second
+    assert first.auditor.verifier is second.auditor.verifier
+    assert offline.auditor.verifier is not first.auditor.verifier
+    SigstoreVerifier.shared.cache_clear()
 
 
 def test_install_verifier_accepts_advertised_sidecar_without_rehashing(

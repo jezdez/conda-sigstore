@@ -10,12 +10,12 @@ from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING
 
+from .evidence import SignerIdentity, validate_sha256
 from .exceptions import (
     BundleVerificationError,
     StatementError,
     TrustMaterialUnavailableError,
 )
-from .model import SignerIdentity, validate_sha256
 from .statements import InTotoStatement
 from .transport import read_bounded_file
 
@@ -142,8 +142,7 @@ class EmbeddedSourceBundle:
             {
                 **report,
                 "status": "verified",
-                "identity": identity.identity,
-                "issuer": identity.issuer,
+                **identity.to_dict(),
                 "predicate_type": predicate_type,
                 "timestamps": list(verified.timestamps),
             },
@@ -322,13 +321,9 @@ class SourceAttestationRequirement:
             "status": status,
             "predicate_type": self.predicate_type,
             "required_publishers": [
-                {"identity": publisher.identity, "issuer": publisher.issuer}
-                for publisher in self.publishers
+                publisher.to_dict() for publisher in self.publishers
             ],
-            "matched_publishers": [
-                {"identity": publisher.identity, "issuer": publisher.issuer}
-                for publisher in matched
-            ],
+            "matched_publishers": [publisher.to_dict() for publisher in matched],
             "bundles": bundles,
             "package_publication": "verified",
             "verification_scope": "draft-source-attestation",
