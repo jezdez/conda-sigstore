@@ -5,45 +5,46 @@ from __future__ import annotations
 import hashlib
 import os
 import tempfile
-from contextlib import nullcontext
 from pathlib import Path
-from typing import TYPE_CHECKING
+
+from conda.exceptions import LockError
+from conda.gateways.disk.lock import LOCK_BYTE, lock
 
 from .model import validate_sha256
 from .settings import DEFAULT_MAX_SIDECAR_BYTES
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from contextlib import AbstractContextManager
 
 
 class DigestCache:
     """A small filesystem cache whose reads always recheck content digests."""
 
-    def __init__(
-        self,
-        root: Path,
-        *,
-        write_lock: Callable[[], AbstractContextManager[None]] | None = None,
-    ) -> None:
+    def __init__(self, root: Path) -> None:
         self.root = Path(root)
-        self._write_lock = write_lock or nullcontext
 
     def _atomic_write(self, path: Path, data: bytes) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        with self._write_lock():
-            descriptor, temporary = tempfile.mkstemp(
-                prefix=f".{path.name}.", dir=path.parent
-            )
-            temporary_path = Path(temporary)
+        lock_path = self.root / ".write-lock"
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with lock_path.open("a+b") as lock_file:
+            lock_file.seek(0, os.SEEK_END)
+            if lock_file.tell() <= LOCK_BYTE:
+                lock_file.write(b"\0" * (LOCK_BYTE + 1 - lock_file.tell()))
+                lock_file.flush()
             try:
-                with os.fdopen(descriptor, "wb") as stream:
-                    stream.write(data)
-                    stream.flush()
-                    os.fsync(stream.fileno())
-                os.replace(temporary_path, path)
-            finally:
-                temporary_path.unlink(missing_ok=True)
+                with lock(lock_file):
+                    descriptor, temporary = tempfile.mkstemp(
+                        prefix=f".{path.name}.", dir=path.parent
+                    )
+                    temporary_path = Path(temporary)
+                    try:
+                        with os.fdopen(descriptor, "wb") as stream:
+                            stream.write(data)
+                            stream.flush()
+                            os.fsync(stream.fileno())
+                        os.replace(temporary_path, path)
+                    finally:
+                        temporary_path.unlink(missing_ok=True)
+            except LockError as exc:
+                raise OSError("could not lock the sidecar cache") from exc
 
     def store_sidecar(self, body: bytes, *, expected_sha256: str | None = None) -> str:
         """Store exact sidecar bytes and return their content digest."""

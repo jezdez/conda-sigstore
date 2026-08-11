@@ -25,7 +25,7 @@ def test_sidecar_cache_rejects_wrong_expected_digest(tmp_path: Path) -> None:
         DigestCache(tmp_path).store_sidecar(b"sidecar", expected_sha256="ab" * 32)
 
 
-def test_cache_uses_injected_write_lock(tmp_path: Path) -> None:
+def test_cache_uses_conda_disk_lock(tmp_path: Path, monkeypatch) -> None:
     entered = []
 
     class Lock:
@@ -35,7 +35,13 @@ def test_cache_uses_injected_write_lock(tmp_path: Path) -> None:
         def __exit__(self, *exc):
             return False
 
-    cache = DigestCache(tmp_path, write_lock=Lock)
+    def recording_lock(file):
+        assert file.name.endswith(".write-lock")
+        assert file.seek(0, 2) > 21
+        return Lock()
+
+    monkeypatch.setattr("conda_sigstore.cache.lock", recording_lock)
+    cache = DigestCache(tmp_path)
     cache.store_sidecar(b"sidecar")
 
     assert entered == [True]
