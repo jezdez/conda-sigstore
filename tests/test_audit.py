@@ -106,6 +106,23 @@ class FakeVerifier:
         )
 
 
+@pytest.fixture
+def installed_records(monkeypatch: pytest.MonkeyPatch):
+    import conda.core.prefix_data
+
+    def install(*records: SimpleNamespace) -> None:
+        class FakePrefixData:
+            def __init__(self, _prefix: Path) -> None:
+                pass
+
+            def iter_records(self):
+                return iter(records)
+
+        monkeypatch.setattr(conda.core.prefix_data, "PrefixData", FakePrefixData)
+
+    return install
+
+
 def source_audit(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -810,9 +827,8 @@ def test_transport_failure_status_mapping(
 def test_environment_audit_does_not_hide_programming_failure(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    installed_records,
 ) -> None:
-    import conda.core.prefix_data
-
     record = SimpleNamespace(
         channel=SimpleNamespace(base_url="https://conda.example.org/team"),
         fn="pkg-1-0.conda",
@@ -820,14 +836,7 @@ def test_environment_audit_does_not_hide_programming_failure(
         sha256="ab" * 32,
     )
 
-    class FakePrefixData:
-        def __init__(self, _prefix: Path) -> None:
-            pass
-
-        def iter_records(self):
-            return iter((record,))
-
-    monkeypatch.setattr(conda.core.prefix_data, "PrefixData", FakePrefixData)
+    installed_records(record)
     monkeypatch.setattr(
         EnvironmentAuditor,
         "audit_record",
@@ -848,9 +857,8 @@ def test_environment_audit_isolates_expected_record_failure(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
     error: Exception,
+    installed_records,
 ) -> None:
-    import conda.core.prefix_data
-
     record = SimpleNamespace(
         channel=SimpleNamespace(base_url="https://conda.example.org/team"),
         fn="pkg-1-0.conda",
@@ -858,14 +866,7 @@ def test_environment_audit_isolates_expected_record_failure(
         sha256="ab" * 32,
     )
 
-    class FakePrefixData:
-        def __init__(self, _prefix: Path) -> None:
-            pass
-
-        def iter_records(self):
-            return iter((record,))
-
-    monkeypatch.setattr(conda.core.prefix_data, "PrefixData", FakePrefixData)
+    installed_records(record)
     monkeypatch.setattr(
         EnvironmentAuditor,
         "audit_record",
@@ -884,9 +885,8 @@ def test_environment_audit_isolates_expected_record_failure(
 def test_environment_audit_orders_records_and_dispatches_source_audit(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    installed_records,
 ) -> None:
-    import conda.core.prefix_data
-
     records = tuple(
         SimpleNamespace(
             channel=SimpleNamespace(base_url="https://conda.example.org/team"),
@@ -897,14 +897,7 @@ def test_environment_audit_orders_records_and_dispatches_source_audit(
         for name in ("zeta", "alpha")
     )
 
-    class FakePrefixData:
-        def __init__(self, _prefix: Path) -> None:
-            pass
-
-        def iter_records(self):
-            return iter(records)
-
-    monkeypatch.setattr(conda.core.prefix_data, "PrefixData", FakePrefixData)
+    installed_records(*records)
 
     def verified(_self, record):
         return VerificationResult(

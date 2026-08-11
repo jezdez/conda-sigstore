@@ -8,28 +8,6 @@ from conda_sigstore.source_attestations import (
 )
 
 
-def source(
-    *,
-    attestation: object = None,
-    sha256: object = "ab" * 32,
-) -> dict[str, object]:
-    if attestation is None:
-        attestation = {
-            "publishers": ["github:example/project"],
-            "verified": [
-                {
-                    "path": "attestations/source.sigstore.json",
-                    "sha256": "cd" * 32,
-                }
-            ],
-        }
-    return {
-        "url": "https://example.org/source.tar.gz",
-        "sha256": sha256,
-        "attestation": attestation,
-    }
-
-
 @pytest.mark.parametrize(
     ("value", "message"),
     [
@@ -98,7 +76,11 @@ def test_source_requirement_rejects_malformed_attestation(
 ) -> None:
     with pytest.raises(ValueError, match=message):
         SourceAttestationRequirement.from_source(
-            source(attestation=value),
+            {
+                "url": "https://example.org/source.tar.gz",
+                "sha256": "ab" * 32,
+                "attestation": value,
+            },
             0,
         )
 
