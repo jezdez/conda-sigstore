@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import hmac
 import json
-import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar, cast
 from urllib.parse import SplitResult, urlsplit, urlunsplit
+
+from conda.common.url import split_anaconda_token
 
 from .exceptions import PublishStatementError, StatementError
 from .model import validate_sha256
@@ -181,11 +182,8 @@ class PublishStatement:
             port = parsed.port
         except ValueError as exc:
             raise PublishStatementError("targetChannel must be a valid URL") from exc
-        if (
-            parsed.username
-            or parsed.password
-            or re.search(r"/t/[A-Za-z0-9-]+", parsed.path)
-        ):
+        _, token = split_anaconda_token(parsed.path)
+        if parsed.username or parsed.password or token is not None:
             raise PublishStatementError("targetChannel must not contain credentials")
         scheme = parsed.scheme.lower()
         if (

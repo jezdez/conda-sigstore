@@ -114,13 +114,16 @@ def test_target_channel_rejects_trailing_slash() -> None:
         PublishStatement(FILENAME, DIGEST, f"{CHANNEL}/")
 
 
-def test_target_channel_rejects_path_credentials() -> None:
+@pytest.mark.parametrize(
+    "channel",
+    [
+        "https://conda.example.org/t/super-secret/channel",
+        "https://conda.example.org/t//channel",
+    ],
+)
+def test_target_channel_rejects_path_credentials(channel: str) -> None:
     with pytest.raises(PublishStatementError, match="credentials"):
-        PublishStatement(
-            FILENAME,
-            DIGEST,
-            "https://conda.example.org/t/super-secret/channel",
-        )
+        PublishStatement(FILENAME, DIGEST, channel)
 
 
 def test_target_channel_preserves_explicit_port_zero() -> None:
