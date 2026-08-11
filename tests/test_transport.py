@@ -11,7 +11,7 @@ import pytest
 from conda_sigstore.cache import DigestCache
 from conda_sigstore.exceptions import TransportError
 from conda_sigstore.model import AttestationDescriptor
-from conda_sigstore.transport import FetchResponse, SidecarTransport
+from conda_sigstore.transport import SidecarTransport
 
 
 def sidecar_bytes() -> bytes:
@@ -30,9 +30,9 @@ def test_repodata_fetches_only_advertised_integrity_bound_sidecar() -> None:
     body = sidecar_bytes()
     seen: list[tuple[str, int]] = []
 
-    def fetch(url: str, limit: int) -> FetchResponse:
+    def fetch(url: str, limit: int) -> bytes:
         seen.append((url, limit))
-        return FetchResponse(body, "text/plain")
+        return body
 
     sidecar = SidecarTransport(max_bytes=1024, fetcher=fetch).load_repodata(
         "https://user:secret@EXAMPLE.org/channel/pkg-1-0.conda?token=x",

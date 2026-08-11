@@ -16,15 +16,9 @@ author = "Jannis Leidel"
 
 extensions = [
     "myst_parser",
-    "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
-    "sphinx.ext.napoleon",
-    "sphinx.ext.viewcode",
     "sphinx_copybutton",
     "sphinx_design",
-    "sphinx_reredirects",
     "sphinx_sitemap",
-    "sphinxarg.ext",
 ]
 
 myst_enable_extensions = [
@@ -109,9 +103,7 @@ html_context = {
     "doc_path": "docs",
 }
 
-html_static_path = ["_static"]
 html_extra_path = ["robots.txt"]
-html_css_files = ["css/custom.css"]
 html_baseurl = "https://jezdez.github.io/conda-sigstore/"
 exclude_patterns = ["_build"]
 

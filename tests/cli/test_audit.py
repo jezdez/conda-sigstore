@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
+import conda.base.context
 import pytest
 
 import conda_sigstore.cli.audit as cli_audit
@@ -25,12 +27,12 @@ def test_audit_uses_explicit_prefix_sidecars(
             captured.update(prefix=prefix, include_sources=include_sources)
             return report
 
-    def resolve_prefix(*, name, prefix):
-        captured.update(name=name, requested_prefix=prefix)
-        return target
-
     monkeypatch.setattr(cli_audit, "EnvironmentAuditor", FakeAuditor)
-    monkeypatch.setattr(cli_audit, "resolve_prefix", resolve_prefix)
+    monkeypatch.setattr(
+        conda.base.context,
+        "context",
+        SimpleNamespace(target_prefix=target),
+    )
     args = sigstore_parser.parse_args(
         [
             "audit",
@@ -50,8 +52,6 @@ def test_audit_uses_explicit_prefix_sidecars(
     assert rich_console.file.getvalue() == ""
     assert captured == {
         "transport": "prefix",
-        "name": None,
-        "requested_prefix": str(tmp_path),
         "prefix": target,
         "include_sources": True,
     }
@@ -93,7 +93,11 @@ def test_audit_human_output_uses_injected_console(
             return report
 
     monkeypatch.setattr(cli_audit, "EnvironmentAuditor", FakeAuditor)
-    monkeypatch.setattr(cli_audit, "resolve_prefix", lambda **kwargs: tmp_path)
+    monkeypatch.setattr(
+        conda.base.context,
+        "context",
+        SimpleNamespace(target_prefix=tmp_path),
+    )
     args = sigstore_parser.parse_args(["audit", "--prefix", str(tmp_path)])
 
     assert cli_audit.execute_audit(args, console=rich_console) == 0

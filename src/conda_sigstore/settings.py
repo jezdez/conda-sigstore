@@ -97,11 +97,3 @@ class SigstoreSettings:
             description="Sigstore trust material and evidence size limits.",
             parameter=ObjectParameter(SigstoreConfig()),
         )
-
-
-__all__ = [
-    "DEFAULT_MAX_SIDECAR_BYTES",
-    "MAX_TRUST_CONFIG_BYTES",
-    "SETTING_NAME",
-    "SigstoreSettings",
-]

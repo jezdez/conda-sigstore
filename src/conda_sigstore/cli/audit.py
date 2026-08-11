@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 
-from ..audit import EnvironmentAuditor, resolve_prefix
+from ..audit import EnvironmentAuditor
 from ..exceptions import CondaSigstoreError, TransportError
 from .output import STATUS_STYLES, print_evidence, print_source_evidence
 
@@ -21,10 +22,12 @@ if TYPE_CHECKING:
 def execute_audit(args: Namespace, *, console: Console | None = None) -> int:
     """Audit installed package and optional source evidence."""
     try:
+        from conda.base.context import context
+
         report = EnvironmentAuditor.current(
             transport="prefix" if args.prefix_sidecars else "repodata"
         ).audit_environment(
-            resolve_prefix(name=args.name, prefix=args.prefix),
+            Path(context.target_prefix),
             include_sources=args.sources,
         )
     except TransportError as exc:

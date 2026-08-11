@@ -22,15 +22,7 @@ if TYPE_CHECKING:
     from .cache import DigestCache
 
 
-@dataclass(frozen=True, slots=True)
-class FetchResponse:
-    """The response fields accepted from an injected fetch operation."""
-
-    body: bytes
-    content_type: str | None = None
-
-
-Fetch = Callable[[str, int], bytes | FetchResponse]
+Fetch = Callable[[str, int], bytes]
 
 
 def read_bounded_file(
@@ -110,7 +102,7 @@ class SidecarTransport:
         """Fetch bounded evidence through an injected or conda HTTP session."""
         safe_url = self.display_url(url)
         if self.fetcher is not None:
-            response: bytes | FetchResponse = self.fetcher(url, self.max_bytes)
+            body = self.fetcher(url, self.max_bytes)
         else:
             try:
                 from conda.base.context import context
@@ -150,10 +142,7 @@ class SidecarTransport:
                                 "sidecar-too-large",
                                 f"attestation sidecar exceeds {self.max_bytes} bytes",
                             )
-                    response = FetchResponse(
-                        bytes(content),
-                        content_type=http_response.headers.get("Content-Type"),
-                    )
+                    body = bytes(content)
             except TransportError:
                 raise
             except Exception as exc:
@@ -162,7 +151,6 @@ class SidecarTransport:
                     f"could not retrieve {safe_url} ({type(exc).__name__})",
                 ) from None
 
-        body = response.body if isinstance(response, FetchResponse) else response
         if not isinstance(body, bytes):
             raise TransportError(
                 "invalid-response",
@@ -330,11 +318,3 @@ class SidecarTransport:
             label=display_url,
             prefix_sidecar=True,
         )
-
-
-__all__ = [
-    "Fetch",
-    "FetchResponse",
-    "SidecarTransport",
-    "read_bounded_file",
-]

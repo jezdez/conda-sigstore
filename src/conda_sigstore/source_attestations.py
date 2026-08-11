@@ -336,10 +336,3 @@ class SourceAttestationRequirement:
         if failure is not None:
             report["failure"] = failure
         return report
-
-
-__all__ = [
-    "EmbeddedSourceBundle",
-    "SourceAttestationRequirement",
-    "resolve_embedded_file",
-]

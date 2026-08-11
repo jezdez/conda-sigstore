@@ -26,7 +26,7 @@ This checklist records the full repository review completed on 2026-08-11. Each 
 - [x] 14. Bound trust configuration and source archive input before parsing.
 - [x] 15. Resolve the unused cache-lock seam by using conda's disk lock for production writes or documenting and simplifying the atomic content-addressed design.
 - [x] 16. Move draft embedded source-attestation behavior out of `audit.py` into one cohesive module.
-- [ ] 17. Remove unused internal surfaces and align entry-point, prefix resolution, and Sphinx setup with the peer plugins.
+- [x] 17. Remove unused internal surfaces and align entry-point, prefix resolution, and Sphinx setup with the peer plugins.
 
 ## Tests, CI, and documentation
 

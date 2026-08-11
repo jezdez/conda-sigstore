@@ -39,7 +39,7 @@ readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.10"
 
 [project.entry-points.conda]
-conda_sigstore = "conda_sigstore.plugin"
+conda-sigstore = "conda_sigstore.plugin"
 
 [project.urls]
 Changelog = "https://github.com/jezdez/conda-sigstore/blob/main/CHANGELOG.md"
@@ -146,10 +146,8 @@ python = "3.14.*"
 conda-sphinx-theme = ">=0.2"
 myst-parser = ">=3.0"
 sphinx = ">=7.0"
-sphinx-argparse = ">=0.4"
 sphinx-copybutton = ">=0.5"
 sphinx-design = ">=0.6"
-sphinx-reredirects = ">=0.1"
 sphinx-sitemap = ">=2.5"
 
 [tool.pixi.feature.release.dependencies]

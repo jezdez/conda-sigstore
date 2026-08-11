@@ -38,19 +38,6 @@ MAX_PACKAGE_ARCHIVE_BYTES = 4 * 1024 * 1024 * 1024
 AuditTransport = Literal["repodata", "prefix"]
 
 
-def resolve_prefix(*, name: str | None = None, prefix: str | None = None) -> Path:
-    """Resolve an explicit path, named environment, or conda target prefix."""
-    if prefix:
-        return Path(prefix).expanduser().resolve()
-    if name:
-        from conda.base.context import locate_prefix_by_name
-
-        return Path(locate_prefix_by_name(name))
-    from conda.base.context import context
-
-    return Path(context.target_prefix)
-
-
 @dataclass(slots=True)
 class EnvironmentAuditor:
     """Audit installed package evidence without enforcing installation policy."""
@@ -419,11 +406,3 @@ class EnvironmentAuditor:
                 )
             packages.append(report)
         return {"version": 1, "prefix": str(target), "packages": packages}
-
-
-__all__ = [
-    "AuditTransport",
-    "EnvironmentAuditor",
-    "MAX_RENDERED_RECIPE_BYTES",
-    "resolve_prefix",
-]

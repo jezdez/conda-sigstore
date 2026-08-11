@@ -130,6 +130,3 @@ def create_attestation(
     finally:
         temporary_path.unlink(missing_ok=True)
     return destination
-
-
-__all__ = ["create_attestation", "sha256_file", "sign_statement"]

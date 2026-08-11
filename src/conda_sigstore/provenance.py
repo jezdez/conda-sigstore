@@ -156,6 +156,3 @@ class SlsaProvenance:
             "started_on": self.started_on,
             "finished_on": self.finished_on,
         }
-
-
-__all__ = ["ProvenanceMaterial", "SlsaProvenance"]

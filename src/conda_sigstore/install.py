@@ -79,6 +79,3 @@ class InstallVerifier:
             f"Sigstore verification rejected {archive_name}: "
             f"{result.status.value}{suffix}"
         )
-
-
-__all__ = ["InstallVerifier"]

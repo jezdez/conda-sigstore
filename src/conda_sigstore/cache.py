@@ -78,6 +78,3 @@ class DigestCache:
         if len(body) > max_bytes or hashlib.sha256(body).hexdigest() != expected:
             return None
         return body
-
-
-__all__ = ["DigestCache"]

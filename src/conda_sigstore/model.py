@@ -192,16 +192,3 @@ class Sidecar:
         object.__setattr__(self, "sha256", validate_sha256(self.sha256))
         if not self.bundles:
             raise ValueError("sidecar must contain at least one bundle")
-
-
-__all__ = [
-    "AuthorizationStatus",
-    "AttestationDescriptor",
-    "SignerIdentity",
-    "Sidecar",
-    "VerificationFailure",
-    "VerificationResult",
-    "VerificationStatus",
-    "VerifiedEvidence",
-    "validate_sha256",
-]

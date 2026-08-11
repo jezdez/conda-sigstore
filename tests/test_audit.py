@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from conda_sigstore.audit import EnvironmentAuditor, resolve_prefix
+from conda_sigstore.audit import EnvironmentAuditor
 from conda_sigstore.cache import DigestCache
 from conda_sigstore.exceptions import (
     BundleVerificationError,
@@ -153,10 +153,6 @@ def source_audit(
         package_verified=True,
         package_sha256=package_sha256,
     )
-
-
-def test_resolve_explicit_prefix(tmp_path: Path) -> None:
-    assert resolve_prefix(prefix=str(tmp_path)) == tmp_path.resolve()
 
 
 def test_retained_archive_requires_exact_package_filename(
