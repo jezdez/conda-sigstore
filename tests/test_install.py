@@ -143,6 +143,42 @@ def test_install_verifier_rejects_explicit_local_package_without_fetching(
         verifier.verify(spec, archive, DIGEST)
 
 
+def test_install_verifier_rejects_archive_filename_mismatch(
+    tmp_path: Path,
+    package_record: PackageRecord,
+) -> None:
+    verifier = InstallVerifier(
+        EnvironmentAuditor(
+            SigstoreSettings(),
+            FakeVerifier(verified_publication()),
+            sidecars=SidecarTransport(
+                fetcher=lambda *_args: pytest.fail("mismatched archive must not fetch")
+            ),
+        )
+    )
+
+    with pytest.raises(CondaVerificationError, match="filename"):
+        verifier.verify(package_record, tmp_path / "other-1.0-0.conda", DIGEST)
+
+
+def test_install_verifier_rejects_malformed_hook_sha(
+    tmp_path: Path,
+    package_record: PackageRecord,
+) -> None:
+    verifier = InstallVerifier(
+        EnvironmentAuditor(
+            SigstoreSettings(),
+            FakeVerifier(verified_publication()),
+            sidecars=SidecarTransport(
+                fetcher=lambda *_args: pytest.fail("malformed digest must not fetch")
+            ),
+        )
+    )
+
+    with pytest.raises(CondaVerificationError, match="64-character hexadecimal"):
+        verifier.verify(package_record, tmp_path / FILENAME, "not-a-sha256")
+
+
 @pytest.mark.parametrize(
     ("failure", "expected"),
     [
