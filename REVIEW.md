@@ -13,7 +13,7 @@ This checklist records the full repository review completed on 2026-08-11. Each 
 - [x] 4. Convert expected command failures to a dedicated `CondaError` while preserving transport failure codes and leaving programming errors visible.
 - [x] 5. Detect an artifact that changes during direct verification.
 - [x] 6. Require SHA-256 values to contain exactly 64 hexadecimal characters.
-- [ ] 7. Select only the exact retained package filename during audit.
+- [x] 7. Select only the exact retained package filename during audit.
 - [ ] 8. Parse sidecars and statements as strict UTF-8 JSON and reject nonstandard numeric constants.
 - [ ] 9. Distinguish unavailable source evidence from invalid evidence and avoid exposing raw parser input in failures.
 - [ ] 10. Replace broad orchestration catches with the domain exceptions expected at each boundary.

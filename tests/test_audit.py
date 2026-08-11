@@ -153,6 +153,33 @@ def test_resolve_explicit_prefix(tmp_path: Path) -> None:
     assert resolve_prefix(prefix=str(tmp_path)) == tmp_path.resolve()
 
 
+def test_retained_archive_requires_exact_package_filename(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    from conda.core.package_cache_data import PackageCacheData
+
+    wrong = SimpleNamespace(
+        fn="pkg-1-0.tar.bz2",
+        is_fetched=True,
+        package_tarball_full_path=str(tmp_path / "pkg-1-0.tar.bz2"),
+    )
+    exact = SimpleNamespace(
+        fn="pkg-1-0.conda",
+        is_fetched=True,
+        package_tarball_full_path=str(tmp_path / "pkg-1-0.conda"),
+    )
+    monkeypatch.setattr(
+        PackageCacheData,
+        "query_all",
+        classmethod(lambda cls, record: iter((wrong, exact))),
+    )
+
+    assert EnvironmentAuditor.retained_archive(
+        SimpleNamespace(fn="pkg-1-0.conda")
+    ) == Path(exact.package_tarball_full_path)
+
+
 def test_source_audit_requires_verified_package_publication() -> None:
     auditor = EnvironmentAuditor(SigstoreSettings(), FakeVerifier({}, {}))
 

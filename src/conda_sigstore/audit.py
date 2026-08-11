@@ -404,7 +404,11 @@ class EnvironmentAuditor:
         from conda.core.package_cache_data import PackageCacheData
 
         cached = next(
-            (entry for entry in PackageCacheData.query_all(record) if entry.is_fetched),
+            (
+                entry
+                for entry in PackageCacheData.query_all(record)
+                if entry.is_fetched and entry.fn == record.fn
+            ),
             None,
         )
         return Path(cached.package_tarball_full_path) if cached is not None else None
