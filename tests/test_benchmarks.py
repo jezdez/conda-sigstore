@@ -14,12 +14,16 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import conda.base.context
+import conda.misc
 import conda_package_handling.api as package_handling
 import pytest
+from conda.base.constants import PACKAGE_CACHE_MAGIC_FILE
+from conda.base.context import reset_context
 from conda.core import package_cache_data, path_actions
 from conda.core.package_cache_data import PackageCacheData, ProgressiveFetchExtract
 from conda.gateways.disk.read import compute_sum
 from conda.models.records import PackageRecord
+from conda.plugins.types import CondaPackageVerifier
 
 from conda_sigstore import plugin
 from conda_sigstore.evidence import VerificationStatus
@@ -39,6 +43,7 @@ CHANNEL = "https://prefix.dev/github-releases"
 PREFIX_CHANNEL = "https://prefix.dev/sigstore-example"
 PREFIX_PACKAGE = "signed-package=2.1.0=hb0f4dca_0"
 LARGE_PAYLOAD_BYTES = 32 * 1024 * 1024
+WORKSPACE_PACKAGE_COUNT = 3
 
 
 @pytest.fixture(scope="module")
@@ -61,6 +66,37 @@ def large_conda_archive(tmp_path_factory: pytest.TempPathFactory) -> Path:
         root,
     )
     return Path(archive)
+
+
+@pytest.fixture(scope="module")
+def workspace_conda_archives(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> tuple[Path, ...]:
+    """Build packages for the conda-workspaces prepare and install sequence."""
+    root = tmp_path_factory.mktemp("workspace-conda-archives")
+    archives = []
+    for index in range(WORKSPACE_PACKAGE_COUNT):
+        name = f"workspace-benchmark-{index}"
+        source = root / f"source-{index}"
+        (source / "info").mkdir(parents=True)
+        (source / "info" / "index.json").write_text(
+            f'{{"name":"{name}","version":"1.0","build":"0",'
+            '"build_number":0,"subdir":"noarch","noarch":"generic"}\n'
+        )
+        (source / "info" / "files").write_text(f"share/{name}.txt\n")
+        (source / "share").mkdir()
+        (source / "share" / f"{name}.txt").write_text(f"payload {index}\n")
+        archives.append(
+            Path(
+                package_handling.create(
+                    source,
+                    None,
+                    f"{name}-1.0-0.conda",
+                    root,
+                )
+            )
+        )
+    return tuple(archives)
 
 
 def test_bench_disabled_plugin_hook_collection(
@@ -286,6 +322,118 @@ def test_bench_large_retained_archive_extraction(
         )
         == LARGE_PAYLOAD_BYTES
     )
+
+
+def test_bench_workspace_locked_install_sequence(
+    benchmark: BenchmarkFixture,
+    workspace_conda_archives: tuple[Path, ...],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Measure the prepare-then-install sequence used by conda-workspaces."""
+    package_cache = tmp_path / "pkgs"
+    package_cache.mkdir()
+    (package_cache / PACKAGE_CACHE_MAGIC_FILE).touch()
+    for archive in workspace_conda_archives:
+        shutil.copy2(archive, package_cache / archive.name)
+    monkeypatch.setenv("CONDA_PKGS_DIRS", os.fspath(package_cache))
+    monkeypatch.setenv("CONDA_JSON", "true")
+    monkeypatch.setenv("CONDA_QUIET", "true")
+    monkeypatch.setenv("CONDA_REGISTER_ENVS", "false")
+    reset_context([])
+
+    callback_count = 0
+
+    def record_verification(_record: object, _path: object, _sha256: str) -> None:
+        nonlocal callback_count
+        callback_count += 1
+
+    verifier = CondaPackageVerifier("benchmark", record_verification)
+    plugin_manager = conda.base.context.context.plugin_manager
+    monkeypatch.setattr(
+        plugin_manager,
+        "get_package_verifiers",
+        lambda: (verifier,),
+    )
+
+    extraction_calls = 0
+    extract_package = plugin_manager.extract_package
+
+    def record_extraction(
+        source_full_path: str | os.PathLike[str],
+        destination_directory: str | os.PathLike[str],
+    ) -> None:
+        nonlocal extraction_calls
+        extraction_calls += 1
+        extract_package(source_full_path, destination_directory)
+
+    monkeypatch.setattr(plugin_manager, "extract_package", record_extraction)
+    monkeypatch.setattr(package_cache_data, "EXTRACT_PROCESSES", 1)
+
+    sha256_passes = 0
+    conda_compute_sum = path_actions.compute_sum
+
+    def record_compute_sum(
+        path: str | os.PathLike[str],
+        algorithm: Literal["md5", "sha256"],
+    ) -> str:
+        nonlocal sha256_passes
+        if algorithm == "sha256":
+            sha256_passes += 1
+        return conda_compute_sum(path, algorithm)
+
+    monkeypatch.setattr(path_actions, "compute_sum", record_compute_sum)
+    monkeypatch.setattr(package_cache_data, "compute_sum", record_compute_sum)
+    explicit_specs = [
+        f"{archive.as_uri()}#{compute_sum(archive, 'sha256')}"
+        for archive in workspace_conda_archives
+    ]
+    iteration = 0
+
+    def prepare_install() -> tuple[tuple[Path], dict[str, object]]:
+        nonlocal callback_count, extraction_calls, iteration, sha256_passes
+        callback_count = 0
+        extraction_calls = 0
+        sha256_passes = 0
+        prefix = tmp_path / f"prefix-{iteration}"
+        iteration += 1
+        return (prefix,), {}
+
+    def install(prefix: Path) -> dict[str, int]:
+        records = list(conda.misc.get_package_records_from_explicit(explicit_specs))
+        prepare_callbacks = callback_count
+        prepare_extractions = extraction_calls
+        prepare_sha256_passes = sha256_passes
+
+        conda.misc.install_explicit_packages(records, os.fspath(prefix))
+        assert len(tuple((prefix / "conda-meta").glob("*.json"))) == len(records)
+        return {
+            "package_count": len(records),
+            "prepare_callbacks": prepare_callbacks,
+            "install_callbacks": callback_count - prepare_callbacks,
+            "prepare_extractions": prepare_extractions,
+            "install_extractions": extraction_calls - prepare_extractions,
+            "prepare_sha256_passes": prepare_sha256_passes,
+            "install_sha256_passes": sha256_passes - prepare_sha256_passes,
+        }
+
+    measurements = benchmark.pedantic(
+        install,
+        setup=prepare_install,
+        rounds=5,
+        iterations=1,
+    )
+    benchmark.extra_info.update(measurements)
+
+    assert measurements == {
+        "package_count": WORKSPACE_PACKAGE_COUNT,
+        "prepare_callbacks": WORKSPACE_PACKAGE_COUNT,
+        "install_callbacks": WORKSPACE_PACKAGE_COUNT,
+        "prepare_extractions": WORKSPACE_PACKAGE_COUNT,
+        "install_extractions": WORKSPACE_PACKAGE_COUNT,
+        "prepare_sha256_passes": WORKSPACE_PACKAGE_COUNT * 2,
+        "install_sha256_passes": WORKSPACE_PACKAGE_COUNT * 2,
+    }
 
 
 @pytest.mark.live_interop
