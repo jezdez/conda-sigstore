@@ -29,7 +29,9 @@
     package-verifier hook. Do not register it before the required conda record
     and hook contracts are released.
   - `cache.py` owns content-addressed sidecars.
-  - `audit.py` owns installed-environment and source-evidence auditing.
+  - `audit.py` owns installed-environment and source-evidence audit orchestration.
+  - `source_attestations.py` owns draft recipe declarations, embedded paths,
+    bundle verification, and publisher matching.
   - `provenance.py` owns factual parsing of separate provenance evidence.
 
 - Tests live under `tests/` and mirror the source module or behavior under test.

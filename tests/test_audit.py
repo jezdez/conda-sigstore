@@ -7,12 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from conda_sigstore.audit import (
-    EnvironmentAuditor,
-    SourceAttestationRequirement,
-    resolve_embedded_file,
-    resolve_prefix,
-)
+from conda_sigstore.audit import EnvironmentAuditor, resolve_prefix
 from conda_sigstore.cache import DigestCache
 from conda_sigstore.exceptions import (
     BundleVerificationError,
@@ -21,6 +16,10 @@ from conda_sigstore.exceptions import (
 )
 from conda_sigstore.model import SignerIdentity, VerificationStatus
 from conda_sigstore.settings import SigstoreSettings
+from conda_sigstore.source_attestations import (
+    SourceAttestationRequirement,
+    resolve_embedded_file,
+)
 from conda_sigstore.statements import InTotoStatement, PublishStatement
 from conda_sigstore.transport import SidecarTransport
 from conda_sigstore.verification import CryptographicVerification
