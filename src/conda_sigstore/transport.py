@@ -17,6 +17,7 @@ from .settings import DEFAULT_MAX_SIDECAR_BYTES
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+    from typing import NoReturn
 
     from .cache import DigestCache
 
@@ -196,8 +197,18 @@ class SidecarTransport:
                 result[key] = value
             return result
 
+        def reject_constant(value: str) -> NoReturn:
+            raise TransportError(
+                "invalid-sidecar",
+                f"invalid JSON constant: {value}",
+            )
+
         try:
-            value = json.loads(body, object_pairs_hook=unique_object)
+            value = json.loads(
+                body.decode("utf-8"),
+                object_pairs_hook=unique_object,
+                parse_constant=reject_constant,
+            )
         except UnicodeDecodeError as exc:
             raise TransportError(
                 "invalid-sidecar",

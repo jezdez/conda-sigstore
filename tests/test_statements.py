@@ -166,6 +166,13 @@ def test_in_toto_statement_rejects_duplicate_json_keys() -> None:
         InTotoStatement.from_payload(payload)
 
 
+def test_in_toto_statement_rejects_non_utf8_json() -> None:
+    payload = PublishStatement(FILENAME, DIGEST).payload().decode().encode("utf-16")
+
+    with pytest.raises(StatementError, match="UTF-8"):
+        InTotoStatement.from_payload(payload)
+
+
 @pytest.mark.parametrize("constant", ["NaN", "Infinity", "-Infinity"])
 def test_in_toto_statement_rejects_nonstandard_json_constants(constant: str) -> None:
     payload = PublishStatement(FILENAME, DIGEST).payload().decode()

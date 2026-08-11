@@ -171,6 +171,23 @@ def test_sidecar_rejects_nonobject_bundle_elements() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("body", "message"),
+    [
+        (json.dumps([{}]).encode("utf-16"), "UTF-8"),
+        (b'[{"extension": NaN}]', "invalid JSON constant"),
+    ],
+)
+def test_sidecar_requires_strict_utf8_json(body: bytes, message: str) -> None:
+    descriptor = AttestationDescriptor(hashlib.sha256(body).hexdigest(), len(body))
+
+    with pytest.raises(TransportError, match=message):
+        SidecarTransport(fetcher=lambda url, limit: body).load_repodata(
+            "https://example.org/pkg-1-0.conda",
+            descriptor,
+        )
+
+
 def test_default_transport_uses_conda_session_for_url(monkeypatch) -> None:
     body = sidecar_bytes()
     calls: list[tuple[object, ...]] = []

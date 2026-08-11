@@ -85,6 +85,8 @@ class InTotoStatement:
             value: object = dict(payload)
         else:
             try:
+                if isinstance(payload, bytes):
+                    payload = payload.decode("utf-8")
                 value = json.loads(
                     payload,
                     object_pairs_hook=cls.unique_json_object,
