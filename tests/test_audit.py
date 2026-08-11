@@ -715,7 +715,7 @@ def test_transport_failure_status_mapping(
     assert result.failures[0].code == code
 
 
-def test_environment_audit_isolates_record_failure(
+def test_environment_audit_does_not_hide_programming_failure(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -743,8 +743,5 @@ def test_environment_audit_isolates_record_failure(
     )
     auditor = EnvironmentAuditor(SigstoreSettings(), FakeVerifier({}, {}))
 
-    report = auditor.audit_environment(tmp_path)
-
-    package = report["packages"][0]
-    assert package["status"] == "evidence-unavailable"
-    assert "RuntimeError" in package["failures"][0]["message"]
+    with pytest.raises(RuntimeError, match="boom"):
+        auditor.audit_environment(tmp_path)

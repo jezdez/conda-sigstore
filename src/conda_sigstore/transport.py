@@ -109,10 +109,10 @@ class SidecarTransport:
     def fetch(self, url: str) -> bytes:
         """Fetch bounded evidence through an injected or conda HTTP session."""
         safe_url = self.display_url(url)
-        try:
-            if self.fetcher is not None:
-                response: bytes | FetchResponse = self.fetcher(url, self.max_bytes)
-            else:
+        if self.fetcher is not None:
+            response: bytes | FetchResponse = self.fetcher(url, self.max_bytes)
+        else:
+            try:
                 from conda.base.context import context
                 from conda.gateways.connection.session import get_session
 
@@ -154,13 +154,13 @@ class SidecarTransport:
                         bytes(content),
                         content_type=http_response.headers.get("Content-Type"),
                     )
-        except TransportError:
-            raise
-        except Exception as exc:
-            raise TransportError(
-                "retrieval-failed",
-                f"could not retrieve {safe_url} ({type(exc).__name__})",
-            ) from None
+            except TransportError:
+                raise
+            except Exception as exc:
+                raise TransportError(
+                    "retrieval-failed",
+                    f"could not retrieve {safe_url} ({type(exc).__name__})",
+                ) from None
 
         body = response.body if isinstance(response, FetchResponse) else response
         if not isinstance(body, bytes):

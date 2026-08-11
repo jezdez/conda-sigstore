@@ -302,7 +302,7 @@ def verify_bundles(
                 )
             )
             continue
-        except Exception as exc:
+        except BundleVerificationError as exc:
             failures.append(
                 VerificationFailure("invalid-bundle", str(exc), bundle_index=index)
             )

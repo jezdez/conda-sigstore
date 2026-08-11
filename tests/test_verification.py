@@ -70,6 +70,18 @@ def test_one_verified_bundle_suffices_despite_invalid_sibling() -> None:
     assert result.prefix_sidecar
 
 
+def test_verifier_programming_errors_are_not_security_results() -> None:
+    verifier = FakeVerifier({"bundle": AssertionError("verifier bug")})
+
+    with pytest.raises(AssertionError, match="verifier bug"):
+        verify_bundles(
+            Sidecar("url", "cd" * 32, ("bundle",)),
+            artifact_name=FILENAME,
+            artifact_sha256=DIGEST,
+            verifier=verifier,
+        )
+
+
 def test_malformed_target_channel_does_not_hide_valid_sibling() -> None:
     malformed = PublishStatement(FILENAME, DIGEST).payload()
     malformed_value = json.loads(malformed)

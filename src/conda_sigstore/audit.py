@@ -392,12 +392,13 @@ class EnvironmentAuditor:
         """Create an auditor from conda's operational context."""
         from conda.base.context import context
         from conda.core.package_cache_data import PackageCacheData
+        from conda.exceptions import NoWritablePkgsDirError
 
         settings = SigstoreSettings.current()
         try:
             package_cache = PackageCacheData.first_writable()
             cache = DigestCache(Path(package_cache.pkgs_dir) / ".conda-sigstore")
-        except Exception:
+        except NoWritablePkgsDirError:
             cache = None
         return cls(
             settings=settings,
@@ -683,6 +684,7 @@ class EnvironmentAuditor:
     ) -> dict[str, object]:
         """Return a versioned evidence report for one conda prefix."""
         from conda.core.prefix_data import PrefixData
+        from conda.exceptions import CondaError
 
         target = Path(prefix).expanduser().resolve()
         packages: list[dict[str, object]] = []
@@ -692,7 +694,7 @@ class EnvironmentAuditor:
         ):
             try:
                 result = self.audit_record(record)
-            except Exception as exc:
+            except (CondaError, OSError) as exc:
                 result = VerificationResult(
                     status=VerificationStatus.EVIDENCE_UNAVAILABLE,
                     artifact=record.fn,

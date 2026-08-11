@@ -243,7 +243,9 @@ def test_default_transport_uses_conda_session_for_url(monkeypatch) -> None:
     ]
 
 
-def test_retrieval_error_redacts_credentials_and_formats_ipv6() -> None:
+def test_retrieval_error_redacts_credentials_and_formats_ipv6(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     body = sidecar_bytes()
     descriptor = AttestationDescriptor(hashlib.sha256(body).hexdigest(), len(body))
     artifact_url = (
@@ -251,20 +253,43 @@ def test_retrieval_error_redacts_credentials_and_formats_ipv6() -> None:
         "pkg-1-0.conda?auth=value"
     )
 
-    def fetch(url: str, limit: int) -> bytes:
-        raise OSError(f"failed for {url}")
+    class Session:
+        def get(self, url, *, stream, timeout):
+            raise OSError(f"failed for {url}")
+
+    monkeypatch.setattr(
+        conda.base.context,
+        "context",
+        SimpleNamespace(
+            offline=False,
+            remote_connect_timeout_secs=9,
+            remote_read_timeout_secs=61,
+        ),
+    )
+    monkeypatch.setattr(
+        conda.gateways.connection.session,
+        "get_session",
+        lambda url: Session(),
+    )
 
     with pytest.raises(TransportError) as raised:
-        SidecarTransport(fetcher=fetch).load_repodata(artifact_url, descriptor)
+        SidecarTransport().load_repodata(artifact_url, descriptor)
 
     message = str(raised.value)
     assert raised.value.__cause__ is None
-    assert raised.value.__suppress_context__
     assert message == (
         "could not retrieve https://[2001:db8::1]:8443/pkg-1-0.conda.sigs (OSError)"
     )
     for secret in ("user", "secret", "super-secret", "auth", "value"):
         assert secret not in message
+
+
+def test_injected_fetcher_programming_errors_are_not_transport_results() -> None:
+    def fetch(url: str, limit: int) -> bytes:
+        raise AssertionError("fetcher bug")
+
+    with pytest.raises(AssertionError, match="fetcher bug"):
+        SidecarTransport(fetcher=fetch).fetch("https://example.org/bundle.sigs")
 
 
 def test_local_read_error_does_not_expose_underlying_cause(
