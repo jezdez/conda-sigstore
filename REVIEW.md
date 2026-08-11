@@ -21,7 +21,7 @@ This checklist records the full repository review completed on 2026-08-11. Each 
 
 ## Structure and dependency boundaries
 
-- [ ] 12. Delete unused receipt-era verifier state and private Sigstore configuration access.
+- [x] 12. Delete unused receipt-era verifier state and private Sigstore configuration access.
 - [ ] 13. Declare directly imported dependencies and document dependencies supplied by conda.
 - [ ] 14. Bound trust configuration and source archive input before parsing.
 - [ ] 15. Resolve the unused cache-lock seam by using conda's disk lock for production writes or documenting and simplifying the atomic content-addressed design.

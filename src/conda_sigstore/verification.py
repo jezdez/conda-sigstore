@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import importlib.metadata
 import json
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
@@ -188,31 +187,7 @@ class SigstoreVerifier:
         self.trust_config = trust_config
         self._verifier = verifier
         self._trust_model: Any | None = None
-        self._trust_root_identity: str | None = None
         self._initialization_lock = Lock()
-
-    @property
-    def trust_root_identity(self) -> str:
-        if self._trust_root_identity is None:
-            if self._verifier is not None and self._trust_model is None:
-                return (
-                    f"injected:{type(self._verifier).__module__}."
-                    f"{type(self._verifier).__qualname__}:{id(self._verifier)}"
-                )
-            self.trust_model
-        assert self._trust_root_identity is not None
-        return self._trust_root_identity
-
-    @property
-    def verifier_version(self) -> str:
-        versions = []
-        for distribution in ("conda-sigstore", "sigstore"):
-            try:
-                version = importlib.metadata.version(distribution)
-            except importlib.metadata.PackageNotFoundError:
-                version = "unknown"
-            versions.append(f"{distribution}={version}")
-        return "|".join(versions)
 
     @property
     def trust_model(self) -> Any:
@@ -229,10 +204,6 @@ class SigstoreVerifier:
                     config = ClientTrustConfig.production(offline=self.offline)
                 else:
                     config = ClientTrustConfig.from_json(self.trust_config.read_text())
-                root_json = config._inner.trusted_root.to_json().encode()
-                self._trust_root_identity = (
-                    f"sha256:{hashlib.sha256(root_json).hexdigest()}"
-                )
                 self._trust_model = config
         return self._trust_model
 
