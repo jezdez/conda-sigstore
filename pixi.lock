@@ -60,7 +60,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-w-1.2.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -133,7 +133,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tomli-w-1.2.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -201,7 +201,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/tk-8.6.13-hb794df6_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h3eecb57_6.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -270,7 +270,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-hd3d0363_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -340,7 +340,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/vcomp14-14.51.36247-habf1de7_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -444,7 +444,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/urllib3-2.7.0-pyhd8ed1ab_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/dc/7a19864a7bc9f43121ab459e12768ab0080590e3e1b60a29b2f2eb01fb85/sigstore_models-0.0.6-py3-none-any.whl
@@ -529,7 +529,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/urllib3-2.7.0-pyhd8ed1ab_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/dc/7a19864a7bc9f43121ab459e12768ab0080590e3e1b60a29b2f2eb01fb85/sigstore_models-0.0.6-py3-none-any.whl
@@ -609,7 +609,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/ty-0.0.69-h479939e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h3eecb57_6.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/dc/7a19864a7bc9f43121ab459e12768ab0080590e3e1b60a29b2f2eb01fb85/sigstore_models-0.0.6-py3-none-any.whl
@@ -690,7 +690,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/ty-0.0.69-hdfcc030_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/dc/7a19864a7bc9f43121ab459e12768ab0080590e3e1b60a29b2f2eb01fb85/sigstore_models-0.0.6-py3-none-any.whl
@@ -773,7 +773,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/vcomp14-14.51.36247-habf1de7_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/dc/7a19864a7bc9f43121ab459e12768ab0080590e3e1b60a29b2f2eb01fb85/sigstore_models-0.0.6-py3-none-any.whl
@@ -891,7 +891,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/urllib3-2.7.0-pyhd8ed1ab_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/dc/7a19864a7bc9f43121ab459e12768ab0080590e3e1b60a29b2f2eb01fb85/sigstore_models-0.0.6-py3-none-any.whl
@@ -1002,7 +1002,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/urllib3-2.7.0-pyhd8ed1ab_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/dc/7a19864a7bc9f43121ab459e12768ab0080590e3e1b60a29b2f2eb01fb85/sigstore_models-0.0.6-py3-none-any.whl
@@ -1108,7 +1108,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/yaml-0.2.5-h4132b18_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h3eecb57_6.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/dc/7a19864a7bc9f43121ab459e12768ab0080590e3e1b60a29b2f2eb01fb85/sigstore_models-0.0.6-py3-none-any.whl
@@ -1215,7 +1215,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/yaml-0.2.5-h925e9cb_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/dc/7a19864a7bc9f43121ab459e12768ab0080590e3e1b60a29b2f2eb01fb85/sigstore_models-0.0.6-py3-none-any.whl
@@ -1323,7 +1323,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/yaml-0.2.5-h6a83c73_3.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/dc/7a19864a7bc9f43121ab459e12768ab0080590e3e1b60a29b2f2eb01fb85/sigstore_models-0.0.6-py3-none-any.whl
@@ -1605,7 +1605,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/urllib3-2.7.0-pyhd8ed1ab_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/dc/7a19864a7bc9f43121ab459e12768ab0080590e3e1b60a29b2f2eb01fb85/sigstore_models-0.0.6-py3-none-any.whl
@@ -1694,7 +1694,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/urllib3-2.7.0-pyhd8ed1ab_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/dc/7a19864a7bc9f43121ab459e12768ab0080590e3e1b60a29b2f2eb01fb85/sigstore_models-0.0.6-py3-none-any.whl
@@ -1778,7 +1778,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/tk-8.6.13-hb794df6_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h3eecb57_6.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/dc/7a19864a7bc9f43121ab459e12768ab0080590e3e1b60a29b2f2eb01fb85/sigstore_models-0.0.6-py3-none-any.whl
@@ -1863,7 +1863,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-hd3d0363_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/dc/7a19864a7bc9f43121ab459e12768ab0080590e3e1b60a29b2f2eb01fb85/sigstore_models-0.0.6-py3-none-any.whl
@@ -1949,7 +1949,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/vcomp14-14.51.36247-habf1de7_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/dc/7a19864a7bc9f43121ab459e12768ab0080590e3e1b60a29b2f2eb01fb85/sigstore_models-0.0.6-py3-none-any.whl
@@ -2033,7 +2033,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -2118,7 +2118,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -2195,7 +2195,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/readline-8.3-h68b038d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/tk-8.6.13-hb794df6_3.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -2273,7 +2273,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/readline-8.3-h46df422_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-hd3d0363_3.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/10/4c/af931d88c51ee2fcbf8c817557dcb975133a188f1b44bfa82caa940beeab/frozendict-2.4.7-cp310-cp310-macosx_11_0_arm64.whl
@@ -2352,7 +2352,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/vc14_runtime-14.51.36247-habf1de7_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/vcomp14-14.51.36247-habf1de7_41.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/01/aa/62f082da2c91fac1c234bc9ee0066257ce83f0604abd72e4c9d5991f2d84/pydantic_core-2.46.4-cp310-cp310-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
@@ -2445,7 +2445,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/03/8d/671d81534ea0e2b0e8a121be100020da09eb78861fe3aa8f3ef7dcd3bed1/msgpack-1.2.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
@@ -2529,7 +2529,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -2605,7 +2605,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/readline-8.3-h68b038d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/tk-8.6.13-hb794df6_3.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0b/e3/85ec501f206fb049259288c1f3506e53876937fb00edb47009348e66756b/charset_normalizer-3.4.9-cp311-cp311-macosx_10_9_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
@@ -2682,7 +2682,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/readline-8.3-h46df422_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-hd3d0363_3.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0b/e3/85ec501f206fb049259288c1f3506e53876937fb00edb47009348e66756b/charset_normalizer-3.4.9-cp311-cp311-macosx_10_9_universal2.whl
       - pypi: https://files.pythonhosted.org/packages/0c/3a/dd518a1bf78ed1e9ad8afe57307c079a00eafe4b3068932a27ca1ea56b4f/msgpack-1.2.1-cp311-cp311-macosx_11_0_arm64.whl
@@ -2760,7 +2760,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/vc14_runtime-14.51.36247-habf1de7_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/vcomp14-14.51.36247-habf1de7_41.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -2852,7 +2852,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/01/c4/4fa4c8b3097a11f3c5f09a35b72ed6855fb1d332469504962ab7bafcc702/charset_normalizer-3.4.9-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
@@ -2936,7 +2936,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/03/95/7ed25c90369360f96f8bfa961540845e063377c32a43b775201af66a588c/backports_zstd-1.6.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
@@ -3012,7 +3012,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/readline-8.3-h68b038d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/tk-8.6.13-hb794df6_3.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/10/69/43965eccfdead3b9220015fd1320e117be8c6ed01a62ffab76eeb752f5d5/cffi-2.1.1-cp312-cp312-macosx_10_15_x86_64.whl
@@ -3089,7 +3089,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/readline-8.3-h46df422_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-hd3d0363_3.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/76/f7c02efde81ebb9993586f9e435d2fd1191a6f806f640e4eeb8d004493ed/backports_zstd-1.6.0-cp312-cp312-macosx_11_0_arm64.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
@@ -3167,7 +3167,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/vc14_runtime-14.51.36247-habf1de7_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/vcomp14-14.51.36247-habf1de7_41.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -3258,7 +3258,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/07/f8/41db9de19d7987d6b04715a02b3b40aea467000275d9d758ffaa31af7d50/pydantic_core-2.46.4-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
@@ -3341,7 +3341,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/03/d5/fd02da45b659668b05923b17ba3a0100a0a3d5541e3bd8fcc4ecb711309e/pydantic_core-2.46.4-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
@@ -3418,7 +3418,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/readline-8.3-h68b038d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/tk-8.6.13-hb794df6_3.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -3496,7 +3496,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/readline-8.3-h46df422_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-hd3d0363_3.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -3575,7 +3575,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/vc14_runtime-14.51.36247-habf1de7_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/vcomp14-14.51.36247-habf1de7_41.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/06/c4/c124fbcef0684fcf3c9b72374c2a8c35c94464d8694c50f37eef27f5a145/ruamel_yaml_clib-0.2.15-cp313-cp313-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
@@ -3666,7 +3666,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -3748,7 +3748,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/typing_extensions-4.16.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2026c-h151e31d_0.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -3825,7 +3825,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/tk-8.6.13-hb794df6_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/zstd-1.5.7-h3eecb57_6.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -3903,7 +3903,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tk-8.6.13-hd3d0363_3.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-hbf9d68e_6.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -3982,7 +3982,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/win-64/vcomp14-14.51.36247-habf1de7_41.conda
       - conda: https://conda.anaconda.org/conda-forge/win-64/zstd-1.5.7-h534d264_6.conda
       - pypi: ./
-      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+      - pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
       - pypi: https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/0c/c3/44f3fbbfa403ea2a7c779186dc20772604442dde72947e7d01069cbe98e3/pycparser-3.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/12/b3/231ffd4ab1fc9d679809f356cebee130ac7daa00d6d6f3206dd4fd137e9e/distro-1.9.0-py3-none-any.whl
@@ -8197,9 +8197,9 @@ packages:
   - rich>=13
   - sigstore>=4.5,<5
   requires_python: '>=3.10'
-- pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#bcbfbe4636b86a14cc1c812036a4750f1f02eb7b
+- pypi: git+https://github.com/jezdez/conda.git?branch=feature%2Fpackage-verifiers#49cd8aa0f365912c70cb9d2f34e3a94d43b9654d
   name: conda
-  version: 22.9.1.dev1971
+  version: 22.9.1.dev1972
   requires_dist:
   - archspec>=0.2.3
   - backports-zstd>=1.3.0 ; python_full_version < '3.14'
