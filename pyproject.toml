@@ -130,6 +130,10 @@ pytest = ">=8.0"
 pytest-benchmark = ">=5.0"
 pytest-cov = ">=6.0"
 
+[tool.pixi.feature.test.pypi-dependencies]
+conda-lockfiles = ">=0.2.1"
+conda-workspaces = ">=0.8.0"
+
 [tool.pixi.feature.py310.dependencies]
 python = "3.10.*"
 

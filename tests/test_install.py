@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING
 
 import conda.base.context
 import pytest
+from conda.base.context import reset_context
 from conda.core.package_cache_data import PackageCacheData
-from conda.exceptions import CondaVerificationError
+from conda.exceptions import CondaMultiError, CondaVerificationError
 from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
 
@@ -24,6 +25,8 @@ from conda_sigstore.verification import CryptographicVerification, SigstoreVerif
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from conda.testing.fixtures import CondaCLIFixture
 
 FILENAME = "pkg-1.0-0.conda"
 DIGEST = "ab" * 32
@@ -67,10 +70,13 @@ def package_record() -> PackageRecord:
     )
 
 
-def verified_publication() -> CryptographicVerification:
+def verified_publication(
+    filename: str = FILENAME,
+    digest: str = DIGEST,
+) -> CryptographicVerification:
     return CryptographicVerification(
         InTotoStatement.PAYLOAD_TYPE,
-        PublishStatement(FILENAME, DIGEST, CHANNEL).payload(),
+        PublishStatement(filename, digest, CHANNEL).payload(),
         IDENTITY,
         ("signed-time",),
     )
@@ -487,3 +493,83 @@ def test_install_verifier_does_not_cache_invalid_adjacent_sidecar(
         verifier.verify(package_record, tmp_path / FILENAME, DIGEST)
 
     assert cache.load_artifact_sidecar(DIGEST, f"{CHANNEL}\0{FILENAME}") is None
+
+
+@pytest.mark.parametrize("valid_evidence", [True, False], ids=("valid", "rejected"))
+def test_pixi_lock_install_enforces_evidence_before_extraction(
+    conda_cli: CondaCLIFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    sidecar: bytes,
+    locked_conda_package: tuple[Path, str, str, Path],
+    valid_evidence: bool,
+) -> None:
+    package_cache, digest, artifact_url, extracted_payload = locked_conda_package
+    subdir = artifact_url.rsplit("/", 2)[1]
+    lockfile = tmp_path / "pixi.lock"
+    lockfile.write_text(
+        json.dumps(
+            {
+                "version": 6,
+                "environments": {
+                    "default": {
+                        "channels": [{"url": CHANNEL}],
+                        "packages": {
+                            subdir: [{"conda": artifact_url}],
+                        },
+                    }
+                },
+                "packages": [
+                    {"conda": artifact_url, "sha256": digest},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    prefix = tmp_path / "prefix"
+    fetched: list[str] = []
+
+    def fetch(url: str, _max_bytes: int) -> bytes:
+        if not fetched:
+            assert not extracted_payload.exists()
+        fetched.append(url)
+        return sidecar if valid_evidence else b"{"
+
+    verifier = InstallVerifier(
+        EnvironmentAuditor(
+            SigstoreSettings(),
+            FakeVerifier(verified_publication(FILENAME, digest)),
+            transport="install",
+            sidecars=SidecarTransport(fetcher=fetch),
+        )
+    )
+    monkeypatch.setattr(
+        InstallVerifier,
+        "current",
+        classmethod(lambda _cls: verifier),
+    )
+    monkeypatch.setenv("CONDA_PKGS_DIRS", str(package_cache))
+    monkeypatch.setenv("CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE", "true")
+    reset_context()
+
+    arguments = (
+        "create",
+        "--yes",
+        "--quiet",
+        "--prefix",
+        prefix,
+        "--file",
+        lockfile,
+    )
+
+    if valid_evidence:
+        _stdout, stderr, code = conda_cli(*arguments)
+        assert code == 0, stderr
+        assert (prefix / "payload.txt").read_text(encoding="utf-8") == (
+            "locked package\n"
+        )
+    else:
+        _stdout, _stderr, raised = conda_cli(*arguments, raises=CondaMultiError)
+        assert "invalid-sidecar" in str(raised.value)
+        assert not prefix.exists()
+    assert fetched[0] == f"{artifact_url}.v0.sigs"
