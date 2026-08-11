@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import zlib
 
@@ -22,6 +23,7 @@ from conda_sigstore.verification import (
     CryptographicVerification,
     SigstoreBundleMaterial,
     SigstoreVerifier,
+    verify_artifact,
     verify_bundles,
 )
 
@@ -116,6 +118,28 @@ def test_target_channel_cannot_be_replayed_to_another_channel() -> None:
 
     assert result.status is VerificationStatus.INVALID
     assert result.failures[0].code == "invalid-cep27"
+
+
+def test_direct_verification_rejects_artifact_changed_by_verifier(tmp_path) -> None:
+    artifact = tmp_path / FILENAME
+    artifact.write_bytes(b"before")
+    digest = hashlib.sha256(b"before").hexdigest()
+    payload = PublishStatement(FILENAME, digest, CHANNEL).payload()
+
+    class MutatingVerifier:
+        def verify(self, bundle_json):
+            artifact.write_bytes(b"after")
+            return verified(payload)
+
+    result = verify_artifact(
+        artifact,
+        Sidecar("bundle", "cd" * 32, ("bundle",)),
+        verifier=MutatingVerifier(),
+        channel=CHANNEL,
+    )
+
+    assert result.status is VerificationStatus.INVALID
+    assert result.failures[-1].code == "artifact-changed"
 
 
 def test_sigstore_parser_rejects_unsupported_bundle_media_type() -> None:

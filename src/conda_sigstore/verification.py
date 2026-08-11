@@ -6,7 +6,7 @@ import hashlib
 import hmac
 import importlib.metadata
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from threading import Lock
 from typing import TYPE_CHECKING, Protocol
@@ -481,14 +481,37 @@ def verify_artifact(
     with artifact.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
-    return verify_bundles(
+    artifact_sha256 = digest.hexdigest()
+    result = verify_bundles(
         sidecar,
         artifact_name=artifact.name,
-        artifact_sha256=digest.hexdigest(),
+        artifact_sha256=artifact_sha256,
         verifier=verifier,
         channel=channel,
         expected_signer=expected_signer,
     )
+    digest = hashlib.sha256()
+    with artifact.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    if not hmac.compare_digest(digest.hexdigest(), artifact_sha256):
+        return replace(
+            result,
+            status=VerificationStatus.INVALID,
+            failures=result.failures
+            + (
+                VerificationFailure(
+                    "artifact-changed",
+                    "artifact changed while verification was running",
+                ),
+            ),
+            authorization=(
+                AuthorizationStatus.FAILED
+                if expected_signer is not None
+                else AuthorizationStatus.NOT_EVALUATED
+            ),
+        )
+    return result
 
 
 __all__ = [
