@@ -2,9 +2,9 @@
 
 ## Project structure
 
-- The package provides one `conda sigstore` subcommand through one conda plugin
-  entry point. The unregistered install adapter is retained for the future
-  conda package-verifier and record-preservation contracts.
+- The package provides one `conda sigstore` subcommand and one opt-in
+  pre-extraction package verifier through one conda plugin entry point. The
+  verifier is disabled by default.
 
 - Source lives under `src/conda_sigstore/`. Keep each module responsible for
   one concern:
@@ -13,9 +13,10 @@
   - `cli/attest.py`, `cli/verify.py`, and `cli/audit.py` own their command
     handlers. `cli/output.py` owns shared Rich rendering, while
     `cli/__init__.py` is a thin re-export shim.
-  - `settings.py` owns operational limits and optional Sigstore trust
-    configuration. It does not define publisher authorization.
-  - `model.py` owns shared immutable evidence and result models.
+  - `settings.py` owns operational limits, optional Sigstore trust
+    configuration, and the flat install-enforcement setting. It does not define
+    publisher authorization.
+  - `evidence.py` owns shared immutable evidence and result models.
   - `exceptions.py` owns publish-statement, provenance, transport, bundle
     verification, and trust-material errors.
   - `statements.py` owns generic in-toto parsing and strict CEP 27 publication
@@ -25,9 +26,8 @@
     repodata-advertised `.sigs`, and Prefix.dev sidecar loading.
   - `verification.py` owns Sigstore cryptographic verification followed by CEP
     27 and artifact-binding checks.
-  - `install.py` contains the future adapter for conda's pre-extraction
-    package-verifier hook. Do not register it before the required conda record
-    and hook contracts are released.
+  - `install.py` owns the opt-in adapter for conda's pre-extraction
+    package-verifier hook. It validates evidence and does not authorize signers.
   - `cache.py` owns content-addressed sidecars.
   - `audit.py` owns installed-environment and source-evidence audit orchestration.
   - `source_attestations.py` owns draft recipe declarations, embedded paths,
@@ -186,13 +186,18 @@
   lifecycle behavior that conda already owns.
 
 - Register behavior only through the `[project.entry-points.conda]` entry point
-  and supported pluggy hooks. Keep one `conda sigstore` subcommand and one
-  structured `plugins.conda_sigstore` setting for operational inputs.
+  and supported pluggy hooks. Keep one `conda sigstore` subcommand, one
+  structured `plugins.conda_sigstore` setting for operational inputs, and the
+  flat boolean `plugins.conda_sigstore_enforce` setting for opt-in verification.
 
-- Do not register install verification until conda releases both the
-  package-verifier hook and opaque `PackageRecord.attestations` preservation.
-  Do not substitute an optional hook, pre-command compatibility guard, or
-  transaction hook.
+- Register the package-verifier hook directly and without an optional hook,
+  pre-command compatibility guard, or transaction-hook substitute. Keep
+  enforcement false by default. The locked developer environments use
+  `jezdez/conda` branch `feature/package-verifiers` from conda/conda#16518.
+
+- Do not claim ordinary solved installs can pass strict verification until conda
+  also preserves opaque `PackageRecord.attestations`. conda/conda#16518 adds the
+  hook but does not provide that separate record-preservation contract.
 
 - Treat JSON as an output contract. Machine-readable output must contain one
   stable, unstyled JSON value on stdout and must not be mixed with human status
@@ -231,7 +236,7 @@
   before parsing. Never probe for an undeclared sidecar. Refer to the proposal
   as `conda/ceps#142` or the draft repodata transport.
 
-- The future install verifier must require one cryptographically valid, exact
+- The opt-in install verifier must require one cryptographically valid, exact
   artifact-bound CEP 27 statement from the repodata-advertised sidecar.
   Missing, unavailable, malformed, invalid, or nonmatching evidence must fail
   the package. This does not authorize the signer.

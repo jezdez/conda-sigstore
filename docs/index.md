@@ -3,7 +3,7 @@
 `conda-sigstore` creates and verifies Sigstore publication attestations for
 conda packages without replacing conda's existing package hashes.
 
-It has three jobs:
+It has four jobs:
 
 1. A publisher creates a strict CEP 27 statement for one package and signs it
    with a short-lived Sigstore certificate.
@@ -11,6 +11,8 @@ It has three jobs:
    transparency-log evidence, then receives the authenticated signer details.
 3. An operator audits an installed environment for available publication,
    provenance, and embedded source evidence.
+4. An operator may opt in to a draft pre-extraction verifier that requires
+   valid repodata-advertised CEP 27 evidence.
 
 The plugin supports two sidecar transports:
 
@@ -88,11 +90,16 @@ not identify which admitted bundle represents an authorized publisher.
 requirement to one explicit verification. It does not discover channel
 publisher delegation.
 
-Install enforcement is not registered in the current release. See
-[Installation verification across package managers](explanation/install-verification.md)
-for the current package-manager comparison and
-[Upstream integration contracts](reference/upstream-contracts.md) for the
-required conda changes.
+The plugin registers a direct package-verifier hook against the unreleased API
+in conda/conda#16518. It is disabled by default. When enabled, it fails closed
+unless a repodata-advertised sidecar contains valid CEP 27 evidence for the
+exact artifact. It does not use Prefix.dev sidecars and does not authorize the
+signer.
+
+PR #16518 does not yet preserve the repodata `attestations` descriptor on
+`PackageRecord`, so ordinary solved records cannot currently pass the enabled
+verifier. See [Installation verification across package managers](explanation/install-verification.md)
+and [Upstream integration contracts](reference/upstream-contracts.md).
 
 ```{toctree}
 :hidden:

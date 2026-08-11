@@ -26,6 +26,8 @@ still change incompatibly.
 - Reads Prefix.dev `.v0.sigs` sidecars only when explicitly requested.
 - Audits installed environments and reports available publication, SLSA, and
   recipe source evidence.
+- Provides an opt-in pre-extraction verifier for conda's draft package-verifier
+  hook.
 - Caches integrity-bound sidecars by digest and rehashes them on every read.
 
 A CEP 27 publication attestation identifies who signed an artifact and may name
@@ -51,13 +53,10 @@ targets base explicitly:
 conda pypi -n base install conda-sigstore
 ```
 
-The PyPI command becomes available with the first release. Until then, install
-from a source checkout into conda's base environment:
-
-```console
-conda run -n base python -m pip install /path/to/conda-sigstore
-conda sigstore --help
-```
+The PyPI command becomes available with the first release. The current source
+checkout requires the unreleased conda package-verifier API from
+[conda/conda#16518](https://github.com/conda/conda/pull/16518). Do not install
+it into a released conda environment.
 
 For development, clone this repository and use its locked Pixi environment:
 
@@ -73,7 +72,9 @@ See the
 [installation guide](https://jezdez.github.io/conda-sigstore/how-to/install/)
 for the supported paths.
 
-Installing the plugin does not change package operations.
+The locked environments use `jezdez/conda` branch `feature/package-verifiers`.
+Install verification is disabled by default, so the hook yields no verifier
+unless `plugins.conda_sigstore_enforce` is enabled.
 
 ## Commands
 
@@ -105,8 +106,18 @@ an authorized publisher.
 The plugin reports signer evidence and can apply an exact signer requirement to
 one explicit verification. It does not discover channel publisher delegation.
 
-Install enforcement is not registered in the current release. The required
-conda changes are documented in
+The plugin registers a direct package-verifier hook against the API proposed in
+[conda/conda#16518](https://github.com/conda/conda/pull/16518). Set
+`plugins.conda_sigstore_enforce: true` or
+`CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true` to opt in. Enabled verification
+requires repodata-advertised evidence and fails closed. It never falls back to
+Prefix.dev `.v0.sigs` sidecars.
+
+This is an integration preview. PR #16518 does not preserve the repodata
+`attestations` descriptor on `PackageRecord`, so ordinary solved records cannot
+currently pass enabled verification. A separate upstream preservation change
+must land first. Even after that change, this verifier establishes evidence
+validity, not publisher authorization. See
 [Upstream integration contracts](https://jezdez.github.io/conda-sigstore/reference/upstream-contracts/).
 
 ## Security boundary

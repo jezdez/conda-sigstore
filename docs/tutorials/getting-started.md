@@ -7,7 +7,10 @@ bundle, and interprets the reported evidence.
 
 You need:
 
-- conda 25.5 or newer
+- a conda build with the package-verifier API proposed in
+  [conda/conda#16518](https://github.com/conda/conda/pull/16518). No released
+  conda version provides it yet. This repository's locked Pixi environments
+  use `jezdez/conda` branch `feature/package-verifiers`
 - `conda-sigstore` available to the Python runtime that runs conda, as described
   in [Install conda-sigstore](../how-to/install.md)
 - a `.conda` or `.tar.bz2` package that you are authorized to publish

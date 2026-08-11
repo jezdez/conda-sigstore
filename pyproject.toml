@@ -113,10 +113,11 @@ channels = ["conda-forge"]
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
 
 [tool.pixi.dependencies]
-conda = ">=25.5"
+menuinst = ">=2"
 python = ">=3.10"
 
 [tool.pixi.pypi-dependencies]
+conda = {git = "https://github.com/jezdez/conda.git", branch = "feature/package-verifiers"}
 conda-sigstore = {path = ".", editable = true}
 
 [tool.pixi.feature.dev.dependencies]

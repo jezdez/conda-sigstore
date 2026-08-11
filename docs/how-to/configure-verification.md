@@ -1,8 +1,8 @@
 # Configure verification
 
 `conda-sigstore` uses Sigstore's production trust configuration and a 10 MiB
-sidecar limit by default. Install enforcement is not registered in current
-releases. No `.condarc` entry is required.
+sidecar limit by default. Install verification is disabled by default. No
+`.condarc` entry is required for signing, explicit verification, or auditing.
 
 The optional `plugins.conda_sigstore` setting controls only operational inputs:
 
@@ -15,6 +15,39 @@ plugins:
 
 It does not contain publisher identities, package rules, transport selection,
 or install-verifier activation.
+
+## Enable the package verifier
+
+The flat `plugins.conda_sigstore_enforce` setting controls the opt-in verifier:
+
+```yaml
+plugins:
+  conda_sigstore_enforce: true
+```
+
+For one process, use conda's environment-variable form instead:
+
+```console
+CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true conda install PACKAGE
+```
+
+When enabled, the verifier requires a repodata `attestations` descriptor,
+fetches only the descriptor-selected `.sigs` sidecar, and fails closed for
+missing, unavailable, malformed, invalid, or nonmatching evidence. It never
+probes for a sidecar and never falls back to Prefix.dev `.v0.sigs` input.
+
+:::{warning}
+This is an integration preview. It requires the unreleased conda API in
+[conda/conda#16518](https://github.com/conda/conda/pull/16518), provided by the
+locked developer environments through `jezdez/conda` branch
+`feature/package-verifiers`. PR #16518 does not preserve the repodata
+`attestations` descriptor on `PackageRecord`. Ordinary solved records therefore
+cannot currently pass when enforcement is enabled. A separate upstream change
+must add that preservation.
+:::
+
+The verifier establishes that valid evidence binds the exact package. It does
+not establish that the signer was authorized to publish it.
 
 ## Change the input limit
 

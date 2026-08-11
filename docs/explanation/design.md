@@ -64,11 +64,16 @@ service against a valid sibling. A malformed sidecar container still fails.
 
 ## Installation boundary
 
-Install verification is not registered in the current release. See
+The plugin registers a direct package-verifier hook against the unreleased API
+in conda/conda#16518. The flat `plugins.conda_sigstore_enforce` setting is false
+by default. When enabled, the verifier requires repodata-advertised evidence and
+fails closed before extraction. It does not consume Prefix.dev sidecars.
+
+This boundary validates evidence, not publisher authorization. PR #16518 also
+does not preserve the repodata `attestations` descriptor on `PackageRecord`, so
+ordinary solved records cannot currently pass the enabled verifier. See
 [Installation verification across package managers](install-verification.md)
-for the rationale and
-[Upstream integration contracts](../reference/upstream-contracts.md) for the
-required conda interfaces.
+and [Upstream integration contracts](../reference/upstream-contracts.md).
 
 ## Repodata discovery
 

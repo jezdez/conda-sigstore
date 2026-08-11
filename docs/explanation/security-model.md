@@ -4,8 +4,9 @@ The plugin verifies that a Sigstore-authenticated identity signed a strict CEP
 27 statement for exact conda package bytes. It reports that identity and the
 available evidence. An explicit verification may require an exact identity and
 issuer supplied independently by the operator. The plugin does not discover a
-channel's publisher delegation. Install verification is not registered in the
-current release.
+channel's publisher delegation. Its opt-in install verifier requires valid
+repodata-advertised evidence before extraction, but does not authorize the
+authenticated signer.
 
 ## Protected assets
 

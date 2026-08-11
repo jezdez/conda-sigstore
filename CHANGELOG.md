@@ -27,6 +27,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   `conda sigstore verify`.
 - Versioned JSON output with artifact and observed sidecar SHA-256 digests, plus
   an exact output and exit-status reference.
-- An unregistered install-verifier adapter for the future conda hook and
-  repodata record-preservation contracts.
+- A direct, opt-in pre-extraction verifier for the package-verifier API in
+  conda/conda#16518, controlled by `plugins.conda_sigstore_enforce` and disabled
+  by default. Ordinary solved records remain blocked until conda also preserves
+  repodata attestation descriptors.
 - Rich terminal rendering for human-readable command output.

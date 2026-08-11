@@ -13,7 +13,7 @@ to publish a package.
 | pip | Checks an index-advertised download hash for corruption. `--require-hashes` requires locally supplied hashes for all resolved requirements. | None. PyPI documents a separate `pypi-attestations verify pypi` command for consumer verification. |
 | uv | Records selected index hashes in `uv.lock` and verifies hashes supplied in requirements files. `--require-hashes` requires complete hash coverage. | None. `uv publish` discovers and uploads adjacent PEP 740 attestations, but does not generate them or verify them during installation. |
 | Pixi | Verifies conda and PyPI package checksums recorded in `pixi.lock` when an artifact is installed or reused from cache. | None. Pixi creates or uploads Sigstore attestations for Prefix.dev publishing and documents external consumer verification with `gh` or `cosign`. |
-| conda with conda-sigstore | Conda retains its package digest checks. | No install-time attestation check is registered. A future package verifier requires upstream conda support. |
+| conda with conda-sigstore | Conda retains its package digest checks. | An opt-in direct package verifier requires valid repodata-advertised CEP 27 evidence. It is an integration preview against conda/conda#16518. |
 
 The relevant primary documentation is:
 
@@ -49,7 +49,7 @@ low-level choice through paired `--cert-identity` and
 `--cert-oidc-issuer` options. They apply to one command and do not create
 channel policy.
 
-## What a future install verifier must check
+## What the opt-in install verifier checks
 
 An installation decision has two independent parts:
 
@@ -60,35 +60,55 @@ An installation decision has two independent parts:
    to publish this package to this channel and what the absence of evidence
    means.
 
-`conda-sigstore` implements the first part for explicit verification. It does
-not invent the second part. CEP 27 defines the signed publication statement,
-but no accepted conda standard currently distributes channel publisher
-delegation to clients.
+`conda-sigstore` implements the first part for explicit verification and its
+opt-in install verifier. It does not invent the second part. CEP 27 defines the
+signed publication statement, but no accepted conda standard currently
+distributes channel publisher delegation to clients.
 
-The future verifier uses only a repodata `attestations` descriptor preserved on
+The verifier uses only a repodata `attestations` descriptor preserved on
 the selected `PackageRecord`. It fetches `<artifact>.sigs`, validates the
 advertised size and SHA-256 before parsing, verifies the Sigstore material, and
 requires at least one strict CEP 27 statement for the exact artifact filename
 and SHA-256. An included target-channel claim must match the selected channel.
 
-Missing, unavailable, malformed, invalid, or nonmatching evidence will fail
-closed. A `MatchSpec` will also fail because it does not carry a repodata
+Missing, unavailable, malformed, invalid, or nonmatching evidence fails closed.
+A `MatchSpec` also fails because it does not carry a repodata
 descriptor. That includes local files and explicit URLs which cannot prove
-which channel metadata selected their evidence. The verifier will never probe
-for a sidecar or use Prefix.dev `.v0.sigs` compatibility input.
+which channel metadata selected their evidence. The verifier never probes
+for a sidecar or uses Prefix.dev `.v0.sigs` compatibility input.
 
-This behavior requires two conda changes that are not available in current
-released conda versions:
+Enable it with the flat setting or conda's standard environment override:
+
+```yaml
+plugins:
+  conda_sigstore_enforce: true
+```
+
+```console
+CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true conda install PACKAGE
+```
+
+The setting defaults to false. The plugin registers the package-verifier hook
+directly, without an optional compatibility declaration.
+
+## Current upstream state
+
+[conda/conda#16518](https://github.com/conda/conda/pull/16518) provides the
+pre-extraction verifier boundary. This repository's locked developer
+environments use `jezdez/conda` branch `feature/package-verifiers`. No released
+conda version provides that API yet.
+
+One separate conda change remains:
 
 - preserve the opaque repodata `attestations` mapping on `PackageRecord` through
   solver, cache, and prefix record paths
-- provide an always-run package verifier after artifact digest validation and
-  before extraction, independent of `safety_checks`
 
-Once both contracts ship, the hook must prevent the rejected archive from being
-extracted and fail before prefix unlink or link actions. Other package archives
-can already have completed cache extraction because those operations run
-concurrently.
+PR #16518 does not provide that preservation. Ordinary solved records therefore
+reach the verifier without their descriptor and cannot currently pass when
+enforcement is enabled. Once preservation lands, the hook boundary rejects an
+archive before its extraction and before prefix unlink or link actions. Other
+package archives can already have completed cache extraction because those
+operations run concurrently.
 
 Rejecting a cryptographically valid signer as unauthorized still requires a
 standardized channel delegation that identifies authorized publishers.

@@ -11,13 +11,14 @@ if TYPE_CHECKING:
     from conda.plugins.types import CondaSetting
 
 SETTING_NAME = "conda_sigstore"
+ENFORCE_SETTING_NAME = "conda_sigstore_enforce"
 DEFAULT_MAX_SIDECAR_BYTES = 10 * 1024 * 1024
 MAX_TRUST_CONFIG_BYTES = 1024 * 1024
 
 
 @dataclass(frozen=True, slots=True)
 class SigstoreSettings:
-    """Validated operational settings without identity or enforcement policy."""
+    """Validated operational settings without publisher identity policy."""
 
     max_sidecar_bytes: int = DEFAULT_MAX_SIDECAR_BYTES
     trust_config: Path | None = None
@@ -75,4 +76,16 @@ class SigstoreSettings:
             name=SETTING_NAME,
             description="Sigstore trust material and evidence size limits.",
             parameter=ObjectParameter(SigstoreConfig()),
+        )
+
+    @staticmethod
+    def enforce_conda_setting() -> CondaSetting:
+        """Build the opt-in install-verification setting declaration."""
+        from conda.common.configuration import PrimitiveParameter
+        from conda.plugins.types import CondaSetting
+
+        return CondaSetting(
+            name=ENFORCE_SETTING_NAME,
+            description="Require valid Sigstore evidence before package extraction.",
+            parameter=PrimitiveParameter(False, element_type=bool),
         )

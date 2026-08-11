@@ -89,8 +89,18 @@ package was verified before extraction or installation. See
 [Audit an installed environment](../how-to/audit-environment.md) for the full
 workflow and [JSON output and exit status](json-output.md) for status meanings.
 
-## Ordinary package operations
+## Opt-in package verification
 
-The current plugin does not modify ordinary package operations. Install
-enforcement awaits the conda hook and record-preservation work listed in
+The plugin registers a direct package-verifier hook against the unreleased conda
+API in conda/conda#16518. It yields no verifier unless
+`plugins.conda_sigstore_enforce` is true. The standard environment override is
+`CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true`.
+
+Enabled verification requires a repodata-advertised `.sigs` descriptor and
+fails closed for missing, unavailable, malformed, invalid, or nonmatching
+evidence. It never falls back to Prefix.dev `.v0.sigs` sidecars. The verifier
+establishes evidence validity but does not authorize the signer.
+
+PR #16518 does not preserve `PackageRecord.attestations`, so ordinary solved
+records cannot currently pass enabled verification. See
 [Upstream integration contracts](upstream-contracts.md).

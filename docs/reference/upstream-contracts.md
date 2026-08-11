@@ -1,8 +1,8 @@
 # Upstream integration contracts
 
-The plugin signs, verifies, and audits evidence explicitly. Its unregistered
-install adapter depends on coordinated conda, solver, and channel work. A
-future verifier would enforce evidence validity, not publisher authorization.
+The plugin signs, verifies, and audits evidence explicitly. It also registers a
+direct, opt-in package verifier against the unreleased API in conda/conda#16518.
+The verifier enforces evidence validity, not publisher authorization.
 
 ## Package-record preservation
 
@@ -70,31 +70,41 @@ that behavior.
 
 ## Conda package-verifier hook
 
-Install-time validation of repodata-advertised evidence needs an always-run
-conda verifier boundary that:
+[conda/conda#16518](https://github.com/conda/conda/pull/16518) provides the
+package-verifier boundary used by this plugin. The locked developer environments
+use `jezdez/conda` branch `feature/package-verifiers`. Conda validates the
+recorded size and strongest available artifact digest before invoking the
+registered verifiers. Every verifier must accept before extraction proceeds.
 
-1. runs after the final artifact and repodata record are available
-2. runs before extraction, script execution, unlinking, or linking
-3. covers classic and libmamba solves, explicit URLs, local files, cache hits,
-   restored transactions, and `--download-only`
-4. receives the artifact path, immutable digest, source channel, subdirectory,
-   filename, and repodata descriptor
-5. can abort without prefix side effects
-6. remains independent of `safety_checks`
-7. binds the verified artifact through extraction to prevent replacement
+Each callback receives the selected `PackageRecord` or explicit `MatchSpec`,
+the archive path, and the computed SHA-256. It rejects the archive by raising a
+`CondaError` before extraction. Callbacks run in name order for each archive,
+may run concurrently across archives, may be called more than once, and must
+treat the archive as read-only. Repodata-specific fields are available only if
+the selected record preserves them.
 
 When only an extracted cache entry remains, the verifier must be able to force
 an online redownload or fail offline. A package record digest cannot
 authenticate extracted contents.
 
-`conda-sigstore` does not register install enforcement before this boundary and
-the record-preservation contract are released. It does not substitute a
-transaction hook.
+`conda-sigstore` registers this hook directly, without an optional compatibility
+declaration or transaction-hook substitute. It yields no verifier unless the
+flat `plugins.conda_sigstore_enforce` setting is true. The standard environment
+override is `CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true`.
+
+When enabled, missing, unavailable, malformed, invalid, or nonmatching evidence
+fails closed. The verifier uses only repodata-advertised `.sigs` input and never
+falls back to Prefix.dev `.v0.sigs` sidecars.
+
+PR #16518 does not preserve `PackageRecord.attestations`. Ordinary solved
+records therefore cannot currently pass enabled verification. The separate
+record-preservation contract described above must land before normal solves can
+supply the required descriptor.
 
 This verifier does not need publisher delegation merely to reject advertised
 evidence that is malformed, cryptographically invalid, or bound to different
-artifact bytes. A future requirement for evidence coverage also makes a missing
-descriptor a failure. That is not a claim that the channel authorized the
+artifact bytes. Enabled evidence coverage also makes a missing descriptor a
+failure. That is not a claim that the channel authorized the
 signer. Rejecting a valid signer as unauthorized needs the separate delegation
 contract above.
 
@@ -132,10 +142,10 @@ or invalid. This keeps the downgrade boundary visible.
 
 ## End-to-end conformance
 
-The following matrix is a prerequisite for registering the adapter. Exercise
-every applicable case with both package formats, classic and libmamba solves,
-monolithic and sharded repodata, authenticated channels and mirrors, and online
-and offline cache states.
+The following matrix is a prerequisite for stable end-to-end enforcement.
+Exercise every applicable case with both package formats, classic and libmamba
+solves, monolithic and sharded repodata, authenticated channels and mirrors,
+and online and offline cache states.
 
 The conda and channel integration must demonstrate that:
 

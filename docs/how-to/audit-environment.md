@@ -36,7 +36,7 @@ conda sigstore audit -n runtime --json
 Released conda versions do not preserve this unknown repodata field through
 solver, cache, and prefix records. With a retained archive but no preserved
 descriptor, the default mode reports `missing`. It never probes for an
-undeclared sidecar. The required conda changes are listed in
+undeclared sidecar. The remaining conda record-preservation change is listed in
 [Upstream integration contracts](../reference/upstream-contracts.md).
 
 ## Audit Prefix.dev evidence
