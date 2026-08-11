@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-import hashlib
 import hmac
 import json
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from threading import Lock
 from typing import TYPE_CHECKING, Protocol
+
+from conda.gateways.disk.read import compute_sum
 
 from .exceptions import (
     BundleVerificationError,
@@ -104,14 +105,18 @@ class SigstoreBundleMaterial:
                 continue
             try:
                 identities.append(der_decode(other_name.value, UTF8String)[0].decode())
-            except Exception:
-                continue
+            except Exception as exc:
+                raise BundleVerificationError(
+                    "certificate has a malformed SAN"
+                ) from exc
         identities = list(dict.fromkeys(identities))
         if len(identities) != 1:
             raise BundleVerificationError(
                 "certificate must contain exactly one supported SAN, "
                 f"found {len(identities)}"
             )
+        if not identities[0]:
+            raise BundleVerificationError("certificate has a malformed SAN")
 
         issuer_v1 = ObjectIdentifier("1.3.6.1.4.1.57264.1.1")
         issuer_v2 = ObjectIdentifier("1.3.6.1.4.1.57264.1.8")
@@ -133,6 +138,8 @@ class SigstoreBundleMaterial:
             raise BundleVerificationError(
                 "certificate has a malformed OIDC issuer"
             ) from exc
+        if not issuer:
+            raise BundleVerificationError("certificate has a malformed OIDC issuer")
         return SignerIdentity(identities[0], issuer)
 
     def timestamps(self) -> tuple[str, ...]:
@@ -462,11 +469,7 @@ def verify_artifact(
     expected_signer: SignerIdentity | None = None,
 ) -> VerificationResult:
     """Hash an archive and verify its sidecar."""
-    digest = hashlib.sha256()
-    with artifact.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    artifact_sha256 = digest.hexdigest()
+    artifact_sha256 = compute_sum(artifact, "sha256")
     result = verify_bundles(
         sidecar,
         artifact_name=artifact.name,
@@ -475,11 +478,10 @@ def verify_artifact(
         channel=channel,
         expected_signer=expected_signer,
     )
-    digest = hashlib.sha256()
-    with artifact.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(chunk)
-    if not hmac.compare_digest(digest.hexdigest(), artifact_sha256):
+    if not hmac.compare_digest(
+        compute_sum(artifact, "sha256"),
+        artifact_sha256,
+    ):
         return replace(
             result,
             status=VerificationStatus.INVALID,
