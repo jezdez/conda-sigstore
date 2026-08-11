@@ -101,13 +101,12 @@ def test_repodata_fetches_only_advertised_integrity_bound_sidecar() -> None:
         return body
 
     sidecar = SidecarTransport(max_bytes=1024, fetcher=fetch).load_repodata(
-        "https://user:secret@EXAMPLE.org/channel/pkg-1-0.conda?token=x",
+        "https://user:secret@EXAMPLE.org/channel/pkg-1-0.conda?token=x#sha256=abc",
         AttestationDescriptor(hashlib.sha256(body).hexdigest(), len(body)),
     )
     expected_url = "https://user:secret@EXAMPLE.org/channel/pkg-1-0.conda.sigs?token=x"
     assert seen == [(expected_url, 1024)]
     assert len(sidecar.bundles) == 1
-    assert sidecar.url == "https://example.org/pkg-1-0.conda.sigs"
     assert not sidecar.prefix_sidecar
 
 
@@ -209,7 +208,6 @@ def test_prefix_sidecar_is_explicit_and_unpinned() -> None:
     sidecar = SidecarTransport(fetcher=lambda url, limit: body).load_prefix(
         "https://prefix.dev/channel/linux-64/pkg-1-0.conda"
     )
-    assert sidecar.url.endswith(".conda.v0.sigs")
     assert sidecar.prefix_sidecar
     assert sidecar.sha256 == hashlib.sha256(body).hexdigest()
 
@@ -224,7 +222,6 @@ def test_bundle_input_accepts_raw_single_bundle(tmp_path) -> None:
 
     sidecar = SidecarTransport(max_bytes=1024).load_input(str(source))
 
-    assert sidecar.url == source.name
     assert sidecar.sha256 == hashlib.sha256(source.read_bytes()).hexdigest()
     assert len(sidecar.bundles) == 1
     assert json.loads(sidecar.bundles[0]) == bundle

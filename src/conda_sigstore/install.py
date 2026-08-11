@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit
 
 from .audit import EnvironmentAuditor
 from .evidence import validate_sha256
@@ -17,18 +18,18 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True)
 class InstallVerifier:
-    """Require valid repodata-advertised CEP 27 evidence before extraction."""
+    """Require valid CEP 27 evidence before package extraction."""
 
     auditor: EnvironmentAuditor
 
     def __post_init__(self) -> None:
-        if self.auditor.transport != "repodata":
-            raise ValueError("install verification requires repodata transport")
+        if self.auditor.transport != "install":
+            raise ValueError("install verification requires install transport")
 
     @classmethod
     def current(cls) -> InstallVerifier:
         """Create a verifier from the active conda context."""
-        return cls(EnvironmentAuditor.current(transport="repodata"))
+        return cls(EnvironmentAuditor.current(transport="install"))
 
     def verify(
         self,
@@ -36,18 +37,34 @@ class InstallVerifier:
         package_path: PathType,
         sha256: str,
     ) -> None:
-        """Reject a package unless its advertised evidence verifies."""
+        """Reject a package unless its adjacent evidence verifies."""
         from conda.exceptions import CondaVerificationError
+        from conda.models.match_spec import MatchSpec
         from conda.models.records import PackageRecord
 
         archive_name = Path(package_path).name
-        if not isinstance(record_or_spec, PackageRecord):
+        if isinstance(record_or_spec, PackageRecord):
+            artifact_name = str(record_or_spec.fn)
+        elif isinstance(record_or_spec, MatchSpec):
+            artifact_url = record_or_spec.get_raw_value("url")
+            if not isinstance(artifact_url, str):
+                raise CondaVerificationError(
+                    f"Sigstore verification rejected {archive_name}: "
+                    "the explicit package has no URL"
+                )
+            try:
+                artifact_name = urlsplit(artifact_url).path.rsplit("/", 1)[-1]
+            except ValueError as exc:
+                raise CondaVerificationError(
+                    f"Sigstore verification rejected {archive_name}: "
+                    "the explicit package URL is invalid"
+                ) from exc
+        else:
             raise CondaVerificationError(
                 f"Sigstore verification rejected {archive_name}: "
-                "explicit packages do not carry repodata attestation metadata"
+                "unsupported package metadata"
             )
 
-        artifact_name = str(record_or_spec.fn)
         if artifact_name != archive_name:
             raise CondaVerificationError(
                 f"Sigstore verification rejected {archive_name}: "

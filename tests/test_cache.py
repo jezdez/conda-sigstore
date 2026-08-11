@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from typing import TYPE_CHECKING
 
 import pytest
@@ -35,6 +36,35 @@ def test_sidecar_cache_returns_miss_for_missing_or_oversized_entry(
     body = b"sidecar"
     digest = cache.store_sidecar(body)
     assert cache.load_sidecar(digest, max_bytes=len(body) - 1) is None
+
+
+def test_artifact_binding_loads_only_content_addressed_sidecar(tmp_path: Path) -> None:
+    cache = DigestCache(tmp_path)
+    artifact = "ab" * 32
+    scope = "channel\0package.conda"
+    body = b"sidecar"
+
+    sidecar = cache.store_artifact_sidecar(artifact, scope, body)
+    other_scope = "other\0package.conda"
+    other_body = b"other sidecar"
+    cache.store_artifact_sidecar(artifact, other_scope, other_body)
+
+    assert sidecar == hashlib.sha256(body).hexdigest()
+    assert cache.load_artifact_sidecar(artifact, scope) == body
+    assert cache.load_artifact_sidecar(artifact, other_scope) == other_body
+
+    (tmp_path / "sidecars" / f"{sidecar}.json").write_bytes(b"tampered")
+    assert cache.load_artifact_sidecar(artifact, scope) is None
+
+
+def test_artifact_binding_rejects_corrupt_pointer(tmp_path: Path) -> None:
+    cache = DigestCache(tmp_path)
+    artifact = "ab" * 32
+    scope = "channel\0package.conda"
+    cache.store_artifact_sidecar(artifact, scope, b"sidecar")
+    next((tmp_path / "artifacts").iterdir()).write_bytes(b"not-a-digest")
+
+    assert cache.load_artifact_sidecar(artifact, scope) is None
 
 
 def test_cache_uses_conda_disk_lock(tmp_path: Path, monkeypatch) -> None:

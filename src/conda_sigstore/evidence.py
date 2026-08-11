@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -82,14 +83,6 @@ class VerificationStatus(str, Enum):
     EVIDENCE_UNAVAILABLE = "evidence-unavailable"
 
 
-class AuthorizationStatus(str, Enum):
-    """Whether an explicit signer requirement was evaluated successfully."""
-
-    NOT_EVALUATED = "not-evaluated"
-    VERIFIED = "verified"
-    FAILED = "failed"
-
-
 @dataclass(frozen=True, slots=True)
 class VerificationFailure:
     """One rejected bundle or verification-stage failure."""
@@ -110,8 +103,7 @@ class VerifiedEvidence:
     """Evidence extracted only after successful Sigstore verification."""
 
     bundle_index: int
-    identity: str
-    issuer: str
+    signer: SignerIdentity
     predicate_type: str | None
     verified: bool
     timestamps: tuple[str, ...] = ()
@@ -120,8 +112,7 @@ class VerifiedEvidence:
     def to_dict(self) -> dict[str, object]:
         return {
             "bundle_index": self.bundle_index,
-            "identity": self.identity,
-            "issuer": self.issuer,
+            **self.signer.to_dict(),
             "predicate_type": self.predicate_type,
             "verified": self.verified,
             "timestamps": list(self.timestamps),
@@ -141,7 +132,6 @@ class VerificationResult:
     evidence: tuple[VerifiedEvidence, ...] = ()
     failures: tuple[VerificationFailure, ...] = ()
     prefix_sidecar: bool = False
-    authorization: AuthorizationStatus = AuthorizationStatus.NOT_EVALUATED
     expected_signer: SignerIdentity | None = None
 
     def __post_init__(self) -> None:
@@ -169,6 +159,13 @@ class VerificationResult:
         """Whether a cryptographically valid, artifact-bound statement exists."""
         return self.status is VerificationStatus.VERIFIED
 
+    @property
+    def authorization(self) -> str:
+        """Return the result derived from an explicit signer requirement."""
+        if self.expected_signer is None:
+            return "not-evaluated"
+        return "verified" if self.verified else "failed"
+
     def to_dict(self) -> dict[str, object]:
         """Return the versioned JSON representation used by the CLI."""
         return {
@@ -178,7 +175,7 @@ class VerificationResult:
             "sidecar_sha256": self.sidecar_sha256,
             "channel": self.channel,
             "status": self.status.value,
-            "authorization": self.authorization.value,
+            "authorization": self.authorization,
             "expected_signer": (
                 self.expected_signer.to_dict()
                 if self.expected_signer is not None
@@ -194,12 +191,17 @@ class VerificationResult:
 class Sidecar:
     """A bounded bundle collection with the observed sidecar digest."""
 
-    url: str
     sha256: str
     bundles: tuple[str, ...]
     prefix_sidecar: bool = False
+    body: bytes | None = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "sha256", validate_sha256(self.sha256))
         if not self.bundles:
             raise ValueError("sidecar must contain at least one bundle")
+        if self.body is not None:
+            if not isinstance(self.body, bytes):
+                raise TypeError("sidecar body must be bytes")
+            if hashlib.sha256(self.body).hexdigest() != self.sha256:
+                raise ValueError("sidecar body does not match its SHA-256")

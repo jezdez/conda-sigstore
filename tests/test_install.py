@@ -13,6 +13,7 @@ from conda.models.match_spec import MatchSpec
 from conda.models.records import PackageRecord
 
 from conda_sigstore.audit import EnvironmentAuditor
+from conda_sigstore.cache import DigestCache
 from conda_sigstore.evidence import SignerIdentity
 from conda_sigstore.exceptions import BundleVerificationError, TransportError
 from conda_sigstore.install import InstallVerifier
@@ -36,8 +37,10 @@ IDENTITY = SignerIdentity(
 class FakeVerifier:
     def __init__(self, result: CryptographicVerification | Exception) -> None:
         self.result = result
+        self.calls: list[str] = []
 
     def verify(self, bundle_json: str) -> CryptographicVerification:
+        self.calls.append(bundle_json)
         assert json.loads(bundle_json) == {"bundle": "one"}
         if isinstance(self.result, Exception):
             raise self.result
@@ -50,8 +53,8 @@ def sidecar() -> bytes:
 
 
 @pytest.fixture
-def package_record(sidecar: bytes) -> PackageRecord:
-    record = PackageRecord(
+def package_record() -> PackageRecord:
+    return PackageRecord(
         name="pkg",
         version="1.0",
         build="0",
@@ -62,19 +65,13 @@ def package_record(sidecar: bytes) -> PackageRecord:
         channel=CHANNEL,
         sha256=DIGEST,
     )
-    record.attestations = {
-        "sha256": hashlib.sha256(sidecar).hexdigest(),
-        "size": len(sidecar),
-    }
-    return record
 
 
 def verified_publication() -> CryptographicVerification:
     return CryptographicVerification(
         InTotoStatement.PAYLOAD_TYPE,
         PublishStatement(FILENAME, DIGEST, CHANNEL).payload(),
-        IDENTITY.identity,
-        IDENTITY.issuer,
+        IDENTITY,
         ("signed-time",),
     )
 
@@ -116,6 +113,10 @@ def test_install_verifier_accepts_advertised_sidecar_without_rehashing(
     package_record: PackageRecord,
     sidecar: bytes,
 ) -> None:
+    package_record.attestations = {
+        "sha256": hashlib.sha256(sidecar).hexdigest(),
+        "size": len(sidecar),
+    }
     fetched = []
 
     def fetch(url: str, max_bytes: int) -> bytes:
@@ -126,6 +127,7 @@ def test_install_verifier_accepts_advertised_sidecar_without_rehashing(
         EnvironmentAuditor(
             SigstoreSettings(max_sidecar_bytes=1024),
             FakeVerifier(verified_publication()),
+            transport="install",
             sidecars=SidecarTransport(max_bytes=1024, fetcher=fetch),
         )
     )
@@ -136,25 +138,80 @@ def test_install_verifier_accepts_advertised_sidecar_without_rehashing(
     assert not missing_archive.exists()
 
 
-def test_install_verifier_rejects_missing_descriptor_without_fetching(
+def test_install_verifier_accepts_adjacent_prefix_sidecar_without_descriptor(
     tmp_path: Path,
     package_record: PackageRecord,
+    sidecar: bytes,
 ) -> None:
-    del package_record.attestations
+    fetched: list[str] = []
+
+    def fetch(url: str, _max_bytes: int) -> bytes:
+        fetched.append(url)
+        return sidecar
+
     verifier = InstallVerifier(
         EnvironmentAuditor(
             SigstoreSettings(),
             FakeVerifier(verified_publication()),
+            transport="install",
+            sidecars=SidecarTransport(fetcher=fetch),
+        )
+    )
+
+    assert verifier.verify(package_record, tmp_path / FILENAME, DIGEST) is None
+    assert fetched == [f"{CHANNEL}/linux-64/{FILENAME}.v0.sigs"]
+
+
+def test_install_verifier_does_not_fall_back_from_broken_descriptor(
+    tmp_path: Path,
+    package_record: PackageRecord,
+) -> None:
+    package_record.attestations = {"sha256": "bad", "size": 1}
+    verifier = InstallVerifier(
+        EnvironmentAuditor(
+            SigstoreSettings(),
+            FakeVerifier(verified_publication()),
+            transport="install",
             sidecars=SidecarTransport(
                 fetcher=lambda *_args: pytest.fail(
-                    "missing evidence must not be probed"
+                    "a broken advertised descriptor must not fall back"
                 )
             ),
         )
     )
 
-    with pytest.raises(CondaVerificationError, match="missing-attestations"):
+    with pytest.raises(CondaVerificationError, match="invalid-descriptor"):
         verifier.verify(package_record, tmp_path / FILENAME, DIGEST)
+
+
+def test_install_verifier_does_not_fall_back_when_advertised_sidecar_is_missing(
+    tmp_path: Path,
+    package_record: PackageRecord,
+    sidecar: bytes,
+) -> None:
+    package_record.attestations = {
+        "sha256": hashlib.sha256(sidecar).hexdigest(),
+        "size": len(sidecar),
+    }
+    fetched: list[str] = []
+
+    def fetch(url: str, _max_bytes: int) -> bytes:
+        fetched.append(url)
+        raise TransportError("missing-sidecar", "advertised sidecar is missing")
+
+    verifier = InstallVerifier(
+        EnvironmentAuditor(
+            SigstoreSettings(),
+            FakeVerifier(verified_publication()),
+            transport="install",
+            sidecars=SidecarTransport(fetcher=fetch),
+        )
+    )
+
+    with pytest.raises(CondaVerificationError, match="missing-sidecar"):
+        verifier.verify(package_record, tmp_path / FILENAME, DIGEST)
+
+    assert fetched == [f"{CHANNEL}/linux-64/{FILENAME}.sigs"]
 
 
 def test_install_verifier_rejects_explicit_local_package_without_fetching(
@@ -164,6 +221,7 @@ def test_install_verifier_rejects_explicit_local_package_without_fetching(
         EnvironmentAuditor(
             SigstoreSettings(),
             FakeVerifier(verified_publication()),
+            transport="install",
             sidecars=SidecarTransport(
                 fetcher=lambda *_args: pytest.fail(
                     "explicit packages must not be probed"
@@ -174,8 +232,32 @@ def test_install_verifier_rejects_explicit_local_package_without_fetching(
     archive = tmp_path / FILENAME
     spec = MatchSpec(url=archive.as_uri())
 
-    with pytest.raises(CondaVerificationError, match="explicit"):
+    with pytest.raises(CondaVerificationError, match="must be HTTP or HTTPS"):
         verifier.verify(spec, archive, DIGEST)
+
+
+def test_install_verifier_accepts_explicit_remote_package(
+    tmp_path: Path,
+    sidecar: bytes,
+) -> None:
+    fetched: list[str] = []
+
+    def fetch(url: str, _max_bytes: int) -> bytes:
+        fetched.append(url)
+        return sidecar
+
+    verifier = InstallVerifier(
+        EnvironmentAuditor(
+            SigstoreSettings(),
+            FakeVerifier(verified_publication()),
+            transport="install",
+            sidecars=SidecarTransport(fetcher=fetch),
+        )
+    )
+    url = f"{CHANNEL}/linux-64/{FILENAME}?token=secret#sha256={DIGEST}"
+
+    assert verifier.verify(MatchSpec(url=url), tmp_path / FILENAME, DIGEST) is None
+    assert fetched == [f"{CHANNEL}/linux-64/{FILENAME}.v0.sigs?token=secret"]
 
 
 def test_install_verifier_rejects_archive_filename_mismatch(
@@ -186,6 +268,7 @@ def test_install_verifier_rejects_archive_filename_mismatch(
         EnvironmentAuditor(
             SigstoreSettings(),
             FakeVerifier(verified_publication()),
+            transport="install",
             sidecars=SidecarTransport(
                 fetcher=lambda *_args: pytest.fail("mismatched archive must not fetch")
             ),
@@ -204,6 +287,7 @@ def test_install_verifier_rejects_malformed_hook_sha(
         EnvironmentAuditor(
             SigstoreSettings(),
             FakeVerifier(verified_publication()),
+            transport="install",
             sidecars=SidecarTransport(
                 fetcher=lambda *_args: pytest.fail("malformed digest must not fetch")
             ),
@@ -217,13 +301,18 @@ def test_install_verifier_rejects_malformed_hook_sha(
 @pytest.mark.parametrize(
     ("failure", "expected"),
     [
+        (TransportError("missing-sidecar", "sidecar is missing"), "missing-sidecar"),
         (
             TransportError("retrieval-failed", "could not retrieve sidecar"),
             "retrieval-failed",
         ),
+        (
+            TransportError("offline-cache-miss", "offline evidence is unavailable"),
+            "offline-cache-miss",
+        ),
         (BundleVerificationError("bad signature"), "invalid-bundle"),
     ],
-    ids=("retrieval", "invalid-bundle"),
+    ids=("missing", "retrieval", "offline", "invalid-bundle"),
 )
 def test_install_verifier_reports_evidence_failures(
     tmp_path: Path,
@@ -241,6 +330,7 @@ def test_install_verifier_reports_evidence_failures(
         EnvironmentAuditor(
             SigstoreSettings(),
             FakeVerifier(failure),
+            transport="install",
             sidecars=SidecarTransport(fetcher=fetch),
         )
     )
@@ -251,3 +341,149 @@ def test_install_verifier_reports_evidence_failures(
     message = str(raised.value)
     assert FILENAME in message
     assert expected in message
+
+
+def test_install_verifier_rejects_malformed_adjacent_sidecar(
+    tmp_path: Path,
+    package_record: PackageRecord,
+) -> None:
+    verifier = InstallVerifier(
+        EnvironmentAuditor(
+            SigstoreSettings(),
+            FakeVerifier(verified_publication()),
+            transport="install",
+            sidecars=SidecarTransport(fetcher=lambda _url, _limit: b"{"),
+        )
+    )
+
+    with pytest.raises(CondaVerificationError, match="invalid-sidecar"):
+        verifier.verify(package_record, tmp_path / FILENAME, DIGEST)
+
+
+def test_install_verifier_rejects_nonmatching_adjacent_statement(
+    tmp_path: Path,
+    package_record: PackageRecord,
+    sidecar: bytes,
+) -> None:
+    nonmatching = CryptographicVerification(
+        InTotoStatement.PAYLOAD_TYPE,
+        PublishStatement(FILENAME, "cd" * 32, CHANNEL).payload(),
+        IDENTITY,
+    )
+    verifier = InstallVerifier(
+        EnvironmentAuditor(
+            SigstoreSettings(),
+            FakeVerifier(nonmatching),
+            transport="install",
+            sidecars=SidecarTransport(fetcher=lambda _url, _limit: sidecar),
+        )
+    )
+
+    with pytest.raises(CondaVerificationError, match="invalid-cep27"):
+        verifier.verify(package_record, tmp_path / FILENAME, DIGEST)
+
+
+def test_install_verifier_reuses_verified_adjacent_sidecar(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    package_record: PackageRecord,
+    sidecar: bytes,
+) -> None:
+    cache = DigestCache(tmp_path / "cache")
+    online = InstallVerifier(
+        EnvironmentAuditor(
+            SigstoreSettings(),
+            FakeVerifier(verified_publication()),
+            transport="install",
+            sidecars=SidecarTransport(
+                fetcher=lambda _url, _limit: sidecar,
+                cache=cache,
+            ),
+        )
+    )
+    online.verify(package_record, tmp_path / FILENAME, DIGEST)
+    monkeypatch.setattr(
+        conda.base.context,
+        "context",
+        SimpleNamespace(offline=True),
+    )
+
+    offline_bundle_verifier = FakeVerifier(verified_publication())
+    offline = InstallVerifier(
+        EnvironmentAuditor(
+            SigstoreSettings(),
+            offline_bundle_verifier,
+            transport="install",
+            sidecars=SidecarTransport(
+                fetcher=lambda *_args: pytest.fail(
+                    "verified adjacent evidence must be reused"
+                ),
+                cache=cache,
+            ),
+        )
+    )
+
+    assert offline.verify(package_record, tmp_path / FILENAME, DIGEST) is None
+    assert len(offline_bundle_verifier.calls) == 1
+    assert cache.load_artifact_sidecar(DIGEST, f"{CHANNEL}\0{FILENAME}") == sidecar
+
+
+def test_install_verifier_refreshes_adjacent_sidecar_online(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    package_record: PackageRecord,
+    sidecar: bytes,
+) -> None:
+    monkeypatch.setattr(
+        conda.base.context,
+        "context",
+        SimpleNamespace(offline=False),
+    )
+    cache = DigestCache(tmp_path / "cache")
+    cache.store_artifact_sidecar(
+        DIGEST,
+        f"{CHANNEL}\0{FILENAME}",
+        json.dumps([{"bundle": "stale"}]).encode(),
+    )
+    fetched: list[str] = []
+
+    def fetch(url: str, _max_bytes: int) -> bytes:
+        fetched.append(url)
+        return sidecar
+
+    verifier = InstallVerifier(
+        EnvironmentAuditor(
+            SigstoreSettings(),
+            FakeVerifier(verified_publication()),
+            transport="install",
+            sidecars=SidecarTransport(fetcher=fetch, cache=cache),
+        )
+    )
+
+    assert verifier.verify(package_record, tmp_path / FILENAME, DIGEST) is None
+    assert fetched == [f"{CHANNEL}/linux-64/{FILENAME}.v0.sigs"]
+    assert cache.load_artifact_sidecar(DIGEST, f"{CHANNEL}\0{FILENAME}") == sidecar
+
+
+def test_install_verifier_does_not_cache_invalid_adjacent_sidecar(
+    tmp_path: Path,
+    package_record: PackageRecord,
+    sidecar: bytes,
+) -> None:
+    cache = DigestCache(tmp_path / "cache")
+    verifier = InstallVerifier(
+        EnvironmentAuditor(
+            SigstoreSettings(),
+            FakeVerifier(BundleVerificationError("bad signature")),
+            transport="install",
+            sidecars=SidecarTransport(
+                fetcher=lambda _url, _limit: sidecar,
+                cache=cache,
+            ),
+        )
+    )
+
+    with pytest.raises(CondaVerificationError, match="invalid-bundle"):
+        verifier.verify(package_record, tmp_path / FILENAME, DIGEST)
+
+    assert cache.load_artifact_sidecar(DIGEST, f"{CHANNEL}\0{FILENAME}") is None

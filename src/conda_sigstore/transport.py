@@ -75,9 +75,9 @@ class SidecarTransport:
         filename = parsed.path.rsplit("/", 1)[-1]
         return urlunsplit((parsed.scheme.lower(), host, f"/{filename}", "", ""))
 
-    @classmethod
-    def sidecar_urls(cls, artifact_url: str, suffix: str) -> tuple[str, str]:
-        """Return request and credential-free URLs for one package sidecar."""
+    @staticmethod
+    def sidecar_url(artifact_url: str, suffix: str) -> str:
+        """Return the request URL for one package sidecar."""
         try:
             parsed = urlsplit(artifact_url)
             hostname = parsed.hostname
@@ -86,17 +86,12 @@ class SidecarTransport:
             raise TransportError("invalid-url", "package URL is invalid") from exc
         if parsed.scheme.lower() not in {"http", "https"} or not hostname:
             raise TransportError("invalid-url", "package URL must be HTTP or HTTPS")
-        if parsed.fragment:
-            raise TransportError(
-                "invalid-url",
-                "package URL cannot contain a fragment",
-            )
         request_url = parsed._replace(
             scheme=parsed.scheme.lower(),
             path=f"{parsed.path}{suffix}",
             fragment="",
         ).geturl()
-        return request_url, cls.display_url(request_url)
+        return request_url
 
     def fetch(self, url: str) -> bytes:
         """Fetch bounded evidence through an injected or conda HTTP session."""
@@ -168,7 +163,6 @@ class SidecarTransport:
     def parse(
         body: bytes,
         *,
-        label: str,
         allow_single: bool = False,
         prefix_sidecar: bool = False,
     ) -> Sidecar:
@@ -230,10 +224,10 @@ class SidecarTransport:
             for bundle in value
         )
         return Sidecar(
-            label,
             hashlib.sha256(body).hexdigest(),
             bundles,
             prefix_sidecar=prefix_sidecar,
+            body=body,
         )
 
     def load_input(self, source: str) -> Sidecar:
@@ -243,11 +237,9 @@ class SidecarTransport:
         except ValueError as exc:
             raise TransportError("invalid-url", "bundle URL is invalid") from exc
         if parsed.scheme in {"http", "https"}:
-            label = self.display_url(source)
             body = self.fetch(source)
         else:
             path = Path(source).expanduser()
-            label = path.name
             try:
                 body = read_bounded_file(path, self.max_bytes, description="bundle")
             except ValueError as exc:
@@ -255,13 +247,12 @@ class SidecarTransport:
             except OSError as exc:
                 raise TransportError(
                     "retrieval-failed",
-                    f"could not read bundle {label} ({type(exc).__name__})",
+                    f"could not read bundle {path.name} ({type(exc).__name__})",
                 ) from None
         return self.parse(
             body,
-            label=label,
             allow_single=True,
-            prefix_sidecar=label.endswith(".v0.sigs"),
+            prefix_sidecar=parsed.path.endswith(".v0.sigs"),
         )
 
     def load_repodata(
@@ -276,7 +267,7 @@ class SidecarTransport:
                 f"advertised sidecar is {descriptor.size} bytes and exceeds the limit",
             )
 
-        request_url, display_url = self.sidecar_urls(artifact_url, ".sigs")
+        request_url = self.sidecar_url(artifact_url, ".sigs")
         try:
             body = (
                 self.cache.load_sidecar(descriptor.sha256, max_bytes=self.max_bytes)
@@ -305,13 +296,57 @@ class SidecarTransport:
                 self.cache.store_sidecar(body, expected_sha256=descriptor.sha256)
             except OSError:
                 pass
-        return self.parse(body, label=display_url)
+        return self.parse(body)
 
-    def load_prefix(self, artifact_url: str) -> Sidecar:
+    def load_prefix(
+        self,
+        artifact_url: str,
+        *,
+        artifact_sha256: str | None = None,
+        cache_scope: str | None = None,
+    ) -> Sidecar:
         """Load Prefix.dev's current repodata-unpinned ``.v0.sigs`` file."""
-        request_url, display_url = self.sidecar_urls(artifact_url, ".v0.sigs")
+        from conda.base.context import context
+
+        request_url = self.sidecar_url(artifact_url, ".v0.sigs")
+        try:
+            body = (
+                self.cache.load_artifact_sidecar(
+                    artifact_sha256,
+                    cache_scope,
+                    max_bytes=self.max_bytes,
+                )
+                if context.offline
+                and self.cache is not None
+                and artifact_sha256 is not None
+                and cache_scope is not None
+                else None
+            )
+        except OSError:
+            body = None
+        if body is None:
+            body = self.fetch(request_url)
         return self.parse(
-            self.fetch(request_url),
-            label=display_url,
+            body,
             prefix_sidecar=True,
         )
+
+    def store_prefix(
+        self,
+        artifact_sha256: str,
+        cache_scope: str,
+        sidecar: Sidecar,
+    ) -> None:
+        """Cache an already-verified Prefix sidecar for one package scope."""
+        if not sidecar.prefix_sidecar or sidecar.body is None:
+            raise ValueError("only exact Prefix sidecar bytes can be cached")
+        if self.cache is None:
+            return
+        try:
+            self.cache.store_artifact_sidecar(
+                artifact_sha256,
+                cache_scope,
+                sidecar.body,
+            )
+        except OSError:
+            pass

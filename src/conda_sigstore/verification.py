@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, Protocol
 from conda.gateways.disk.read import compute_sum
 
 from .evidence import (
-    AuthorizationStatus,
     SignerIdentity,
     VerificationFailure,
     VerificationResult,
@@ -42,8 +41,7 @@ if TYPE_CHECKING:
 class CryptographicVerification:
     payload_type: str
     payload: bytes
-    identity: str
-    issuer: str
+    signer: SignerIdentity
     timestamps: tuple[str, ...] = ()
 
 
@@ -57,20 +55,14 @@ class SigstoreBundleMaterial:
     """A parsed Sigstore bundle and its authenticated certificate evidence."""
 
     bundle: Any
-    serialized: str
 
     @classmethod
-    def from_json(cls, bundle_json: str | bytes) -> SigstoreBundleMaterial:
+    def from_json(cls, bundle_json: str) -> SigstoreBundleMaterial:
         """Parse one bundle without weakening Sigstore media-type validation."""
         from sigstore.models import Bundle  # type: ignore[import-not-found]
 
         try:
-            serialized = (
-                bundle_json.decode("utf-8")
-                if isinstance(bundle_json, bytes)
-                else bundle_json
-            )
-            return cls(Bundle.from_json(serialized), serialized)
+            return cls(Bundle.from_json(bundle_json))
         except Exception as exc:
             raise BundleVerificationError(str(exc)) from exc
 
@@ -146,7 +138,7 @@ class SigstoreBundleMaterial:
     def timestamps(self) -> tuple[str, ...]:
         """Report timestamps from already-verified Sigstore material."""
         try:
-            value = json.loads(self.serialized)
+            value = json.loads(self.bundle.to_json())
             entries = value["verificationMaterial"]["tlogEntries"]
         except (KeyError, TypeError, json.JSONDecodeError):
             entries = ()
@@ -271,8 +263,7 @@ class SigstoreVerifier:
         return CryptographicVerification(
             payload_type=payload_type,
             payload=payload,
-            identity=actual_identity.identity,
-            issuer=actual_identity.issuer,
+            signer=actual_identity,
             timestamps=material.timestamps(),
         )
 
@@ -311,10 +302,7 @@ def verify_bundles(
             )
             continue
 
-        signer_matches = expected_signer is None or expected_signer == SignerIdentity(
-            verified.identity,
-            verified.issuer,
-        )
+        signer_matches = expected_signer is None or expected_signer == verified.signer
         if not signer_matches:
             failures.append(
                 VerificationFailure(
@@ -339,8 +327,7 @@ def verify_bundles(
             evidence.append(
                 VerifiedEvidence(
                     bundle_index=index,
-                    identity=verified.identity,
-                    issuer=verified.issuer,
+                    signer=verified.signer,
                     predicate_type=None,
                     verified=False,
                     timestamps=verified.timestamps,
@@ -357,8 +344,7 @@ def verify_bundles(
             evidence.append(
                 VerifiedEvidence(
                     bundle_index=index,
-                    identity=verified.identity,
-                    issuer=verified.issuer,
+                    signer=verified.signer,
                     predicate_type=None,
                     verified=False,
                     timestamps=verified.timestamps,
@@ -419,8 +405,7 @@ def verify_bundles(
         evidence.append(
             VerifiedEvidence(
                 bundle_index=index,
-                identity=verified.identity,
-                issuer=verified.issuer,
+                signer=verified.signer,
                 predicate_type=predicate_type,
                 verified=evidence_verified,
                 timestamps=verified.timestamps,
@@ -459,15 +444,6 @@ def verify_bundles(
         evidence=tuple(evidence),
         failures=tuple(failures),
         prefix_sidecar=sidecar.prefix_sidecar,
-        authorization=(
-            AuthorizationStatus.NOT_EVALUATED
-            if expected_signer is None
-            else (
-                AuthorizationStatus.VERIFIED
-                if package_verified
-                else AuthorizationStatus.FAILED
-            )
-        ),
         expected_signer=expected_signer,
     )
 
@@ -503,11 +479,6 @@ def verify_artifact(
                     "artifact-changed",
                     "artifact changed while verification was running",
                 ),
-            ),
-            authorization=(
-                AuthorizationStatus.FAILED
-                if expected_signer is not None
-                else AuthorizationStatus.NOT_EVALUATED
             ),
         )
     return result

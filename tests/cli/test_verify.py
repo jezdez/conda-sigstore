@@ -7,8 +7,8 @@ import pytest
 
 import conda_sigstore.cli.verify as cli_verify
 from conda_sigstore.evidence import (
-    AuthorizationStatus,
     Sidecar,
+    SignerIdentity,
     VerificationResult,
     VerificationStatus,
     VerifiedEvidence,
@@ -26,7 +26,7 @@ def test_verify_json_passes_explicit_signer_requirement(
         max_sidecar_bytes=1024,
         trust_config=trust_config,
     )
-    sidecar = Sidecar("bundle.json", "cd" * 32, ("{}",))
+    sidecar = Sidecar("cd" * 32, ("{}",))
     captured = {}
 
     class FakeSidecarTransport:
@@ -54,14 +54,15 @@ def test_verify_json_passes_explicit_signer_requirement(
             evidence=(
                 VerifiedEvidence(
                     bundle_index=0,
-                    identity="publisher@example.org",
-                    issuer="https://issuer.example",
+                    signer=SignerIdentity(
+                        "publisher@example.org",
+                        "https://issuer.example",
+                    ),
                     predicate_type="https://example.org/predicate",
                     verified=True,
                     timestamps=("2026-08-10T12:00:00Z",),
                 ),
             ),
-            authorization=AuthorizationStatus.VERIFIED,
             expected_signer=expected_signer,
         )
         captured["result"] = result
@@ -150,8 +151,10 @@ def test_verify_human_output_and_exit_status(
         evidence=(
             VerifiedEvidence(
                 bundle_index=0,
-                identity="publisher@example.org",
-                issuer="https://issuer.example",
+                signer=SignerIdentity(
+                    "publisher@example.org",
+                    "https://issuer.example",
+                ),
                 predicate_type="https://example.org/predicate",
                 verified=True,
             ),
@@ -163,7 +166,7 @@ def test_verify_human_output_and_exit_status(
             pass
 
         def load_input(self, source):
-            return Sidecar("bundle.json", "cd" * 32, ("{}",))
+            return Sidecar("cd" * 32, ("{}",))
 
     monkeypatch.setattr(
         cli_verify.SigstoreSettings,

@@ -45,7 +45,7 @@ def test_slsa_provenance_reports_facts_without_a_level() -> None:
     output = result.to_dict()
     assert output["builder"] == "https://example.org/builder"
     assert output["build_type"] == "https://example.org/build/v1"
-    assert output["source"] is None
+    assert "source" not in output
     assert output["materials"] == [
         {
             "uri": "git+https://example.org/repo",

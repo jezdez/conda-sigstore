@@ -4,6 +4,7 @@ import pytest
 
 from conda_sigstore.evidence import (
     AttestationDescriptor,
+    SignerIdentity,
     VerificationResult,
     VerificationStatus,
     VerifiedEvidence,
@@ -35,8 +36,10 @@ def test_verification_json_reports_evidence_without_authorization() -> None:
         evidence=(
             VerifiedEvidence(
                 bundle_index=0,
-                identity="https://github.com/example/project/workflow",
-                issuer="https://token.actions.githubusercontent.com",
+                signer=SignerIdentity(
+                    "https://github.com/example/project/workflow",
+                    "https://token.actions.githubusercontent.com",
+                ),
                 predicate_type="https://example.org/predicate",
                 verified=True,
             ),

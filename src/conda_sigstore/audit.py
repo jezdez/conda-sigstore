@@ -37,7 +37,8 @@ if TYPE_CHECKING:
 
 MAX_RENDERED_RECIPE_BYTES = 1024 * 1024
 MAX_PACKAGE_ARCHIVE_BYTES = 4 * 1024 * 1024 * 1024
-AuditTransport = Literal["repodata", "prefix"]
+AuditTransport = Literal["repodata", "prefix", "install"]
+_NO_ATTESTATIONS = object()
 
 
 @dataclass(slots=True)
@@ -50,8 +51,8 @@ class EnvironmentAuditor:
     sidecars: SidecarTransport | None = None
 
     def __post_init__(self) -> None:
-        if self.transport not in {"repodata", "prefix"}:
-            raise ValueError("transport must be repodata or prefix")
+        if self.transport not in {"repodata", "prefix", "install"}:
+            raise ValueError("transport must be repodata, prefix, or install")
         if self.sidecars is None:
             self.sidecars = SidecarTransport(
                 max_bytes=self.settings.max_sidecar_bytes,
@@ -88,8 +89,31 @@ class EnvironmentAuditor:
         """Return a credential-free HTTP channel or a redacted scheme label."""
         from conda.models.channel import Channel
 
-        raw = str(getattr(record.channel, "base_url", None) or record.channel)
-        scheme = urlsplit(raw).scheme.lower()
+        record_channel = getattr(record, "channel", None)
+        if record_channel is None:
+            get_raw_value = getattr(record, "get_raw_value", None)
+            raw = get_raw_value("url") if callable(get_raw_value) else None
+            if not isinstance(raw, str):
+                return "unsupported"
+            try:
+                parsed = urlsplit(raw)
+            except ValueError:
+                return "invalid"
+            if parsed.scheme.lower() in {"http", "https"}:
+                try:
+                    return str(
+                        Channel(
+                            parsed._replace(query="", fragment="").geturl()
+                        ).base_url
+                    )
+                except ValueError:
+                    return "invalid"
+        else:
+            raw = str(getattr(record_channel, "base_url", None) or record_channel)
+        try:
+            scheme = urlsplit(raw).scheme.lower()
+        except ValueError:
+            return "invalid"
         if scheme not in {"http", "https"}:
             return f"{scheme}://" if scheme else "unsupported"
         return str(Channel(raw).base_url)
@@ -152,28 +176,52 @@ class EnvironmentAuditor:
         record: Any,
         artifact_sha256: str,
     ) -> VerificationResult:
-        """Verify advertised evidence against a SHA-256 supplied by conda."""
+        """Verify package evidence against a SHA-256 supplied by conda."""
 
         record_url = getattr(record, "url", None)
+        get_raw_value = getattr(record, "get_raw_value", None)
+        explicit_url = None
+        if not record_url:
+            explicit_url = get_raw_value("url") if callable(get_raw_value) else None
+            record_url = explicit_url
+        artifact_name = None if explicit_url else getattr(record, "fn", None)
+        if not artifact_name and record_url:
+            artifact_name = urlsplit(str(record_url)).path.rsplit("/", 1)[-1]
+        if not artifact_name:
+            artifact_name = "unknown"
+        channel = self.channel_url(record)
         artifact_url = (
             str(record_url)
             if record_url
-            else (f"{self.channel_url(record)}/{record.subdir}/{record.fn}")
+            else (f"{channel}/{record.subdir}/{artifact_name}")
         )
+        get_value = getattr(record, "get", None)
+        raw_descriptor = (
+            get_value("attestations", _NO_ATTESTATIONS)
+            if callable(get_value)
+            else getattr(record, "attestations", _NO_ATTESTATIONS)
+        )
+        prefix_sidecar = self.transport == "prefix" or (
+            self.transport == "install" and raw_descriptor is _NO_ATTESTATIONS
+        )
+        cache_scope = f"{channel}\0{artifact_name}"
         try:
-            if self.transport == "repodata":
-                getter = getattr(record, "get", None)
-                raw_descriptor = (
-                    getter("attestations", None)
-                    if callable(getter)
-                    else getattr(record, "attestations", None)
+            if prefix_sidecar:
+                assert self.sidecars is not None
+                sidecar = self.sidecars.load_prefix(
+                    artifact_url,
+                    artifact_sha256=(
+                        artifact_sha256 if self.transport == "install" else None
+                    ),
+                    cache_scope=(cache_scope if self.transport == "install" else None),
                 )
-                if raw_descriptor is None:
+            else:
+                if raw_descriptor is _NO_ATTESTATIONS:
                     return VerificationResult(
                         status=VerificationStatus.MISSING,
-                        artifact=record.fn,
+                        artifact=artifact_name,
                         artifact_sha256=artifact_sha256,
-                        channel=self.channel_url(record),
+                        channel=channel,
                         failures=(
                             VerificationFailure(
                                 "missing-attestations",
@@ -193,11 +241,8 @@ class EnvironmentAuditor:
                     artifact_url,
                     descriptor,
                 )
-            else:
-                assert self.sidecars is not None
-                sidecar = self.sidecars.load_prefix(artifact_url)
         except TransportError as exc:
-            if exc.code == "missing-sidecar" and self.transport == "prefix":
+            if exc.code == "missing-sidecar" and prefix_sidecar:
                 status = VerificationStatus.MISSING
             elif exc.code == "offline-cache-miss":
                 status = VerificationStatus.EVIDENCE_UNAVAILABLE
@@ -213,27 +258,31 @@ class EnvironmentAuditor:
                 status = VerificationStatus.INVALID
             return VerificationResult(
                 status=status,
-                artifact=record.fn,
+                artifact=artifact_name,
                 artifact_sha256=artifact_sha256,
-                channel=self.channel_url(record),
+                channel=channel,
                 failures=(VerificationFailure(exc.code, str(exc)),),
-                prefix_sidecar=self.transport == "prefix",
+                prefix_sidecar=prefix_sidecar,
             )
         except (TypeError, ValueError) as exc:
             return VerificationResult(
                 status=VerificationStatus.INVALID,
-                artifact=record.fn,
+                artifact=artifact_name,
                 artifact_sha256=artifact_sha256,
-                channel=self.channel_url(record),
+                channel=channel,
                 failures=(VerificationFailure("invalid-descriptor", str(exc)),),
             )
-        return verify_bundles(
+        result = verify_bundles(
             sidecar,
-            artifact_name=record.fn,
+            artifact_name=artifact_name,
             artifact_sha256=artifact_sha256,
             verifier=self.verifier,
-            channel=self.channel_url(record),
+            channel=channel,
         )
+        if result.verified and self.transport == "install" and prefix_sidecar:
+            assert self.sidecars is not None
+            self.sidecars.store_prefix(artifact_sha256, cache_scope, sidecar)
+        return result
 
     def audit_sources(
         self,

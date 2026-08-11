@@ -77,3 +77,56 @@ class DigestCache:
         if len(body) > max_bytes or hashlib.sha256(body).hexdigest() != expected:
             return None
         return body
+
+    def store_artifact_sidecar(
+        self,
+        artifact_sha256: str,
+        scope: str,
+        body: bytes,
+    ) -> str:
+        """Bind exact sidecar bytes to one artifact and publication scope."""
+        artifact = validate_sha256(
+            artifact_sha256,
+            field_name="artifact_sha256",
+        )
+        if not isinstance(scope, str) or not scope:
+            raise ValueError("artifact sidecar scope must be a nonempty string")
+        sidecar = self.store_sidecar(body)
+        scope_digest = hashlib.sha256(scope.encode()).hexdigest()
+        self._atomic_write(
+            self.root / "artifacts" / f"{artifact}.{scope_digest}.sha256",
+            sidecar.encode("ascii"),
+        )
+        return sidecar
+
+    def load_artifact_sidecar(
+        self,
+        artifact_sha256: str,
+        scope: str,
+        *,
+        max_bytes: int = DEFAULT_MAX_SIDECAR_BYTES,
+    ) -> bytes | None:
+        """Load a checked sidecar bound to an artifact and publication scope."""
+        artifact = validate_sha256(
+            artifact_sha256,
+            field_name="artifact_sha256",
+        )
+        if not isinstance(scope, str) or not scope:
+            raise ValueError("artifact sidecar scope must be a nonempty string")
+        scope_digest = hashlib.sha256(scope.encode()).hexdigest()
+        path = self.root / "artifacts" / f"{artifact}.{scope_digest}.sha256"
+        try:
+            with path.open("rb") as stream:
+                raw_sidecar = stream.read(65)
+        except FileNotFoundError:
+            return None
+        if len(raw_sidecar) != 64:
+            return None
+        try:
+            sidecar = validate_sha256(
+                raw_sidecar.decode("ascii"),
+                field_name="sidecar_sha256",
+            )
+        except (UnicodeDecodeError, ValueError):
+            return None
+        return self.load_sidecar(sidecar, max_bytes=max_bytes)

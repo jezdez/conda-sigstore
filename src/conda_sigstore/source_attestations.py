@@ -137,7 +137,7 @@ class EmbeddedSourceBundle:
             ValueError,
         ) as exc:
             return {**report, "status": "invalid", "failure": str(exc)}, None
-        identity = SignerIdentity(verified.identity, verified.issuer)
+        identity = verified.signer
         return (
             {
                 **report,

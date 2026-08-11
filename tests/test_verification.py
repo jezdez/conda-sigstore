@@ -21,7 +21,6 @@ from pyasn1.codec.der.encoder import encode as der_encode
 from pyasn1.type.char import UTF8String
 
 from conda_sigstore.evidence import (
-    AuthorizationStatus,
     Sidecar,
     SignerIdentity,
     VerificationStatus,
@@ -61,13 +60,17 @@ class FakeVerifier:
 
 
 def verified(payload: bytes, *, payload_type: str = InTotoStatement.PAYLOAD_TYPE):
-    return CryptographicVerification(payload_type, payload, IDENTITY, ISSUER, ("time",))
+    return CryptographicVerification(
+        payload_type,
+        payload,
+        SignerIdentity(IDENTITY, ISSUER),
+        ("time",),
+    )
 
 
 def certificate_material(extensions: Extensions) -> SigstoreBundleMaterial:
     return SigstoreBundleMaterial(
         SimpleNamespace(signing_certificate=SimpleNamespace(extensions=extensions)),
-        "{}",
     )
 
 
@@ -77,7 +80,7 @@ def test_one_verified_bundle_suffices_despite_invalid_sibling() -> None:
         {"bad": BundleVerificationError("bad signature"), "good": verified(payload)}
     )
     result = verify_bundles(
-        Sidecar("url", "cd" * 32, ("bad", "good"), prefix_sidecar=True),
+        Sidecar("cd" * 32, ("bad", "good"), prefix_sidecar=True),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=verifier,
@@ -96,7 +99,7 @@ def test_verifier_programming_errors_are_not_security_results() -> None:
 
     with pytest.raises(AssertionError, match="verifier bug"):
         verify_bundles(
-            Sidecar("url", "cd" * 32, ("bundle",)),
+            Sidecar("cd" * 32, ("bundle",)),
             artifact_name=FILENAME,
             artifact_sha256=DIGEST,
             verifier=verifier,
@@ -239,7 +242,7 @@ def test_malformed_target_channel_does_not_hide_valid_sibling() -> None:
     malformed_value["predicate"] = {"targetChannel": "https://[invalid"}
     good = PublishStatement(FILENAME, DIGEST, CHANNEL).payload()
     result = verify_bundles(
-        Sidecar("url", "cd" * 32, ("bad", "good")),
+        Sidecar("cd" * 32, ("bad", "good")),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=FakeVerifier(
@@ -258,7 +261,7 @@ def test_malformed_target_channel_does_not_hide_valid_sibling() -> None:
 def test_valid_signature_with_wrong_artifact_is_invalid() -> None:
     payload = PublishStatement("other-1.0-0.conda", DIGEST, CHANNEL).payload()
     result = verify_bundles(
-        Sidecar("url", "cd" * 32, ("bundle",)),
+        Sidecar("cd" * 32, ("bundle",)),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=FakeVerifier({"bundle": verified(payload)}),
@@ -272,7 +275,7 @@ def test_target_channel_cannot_be_replayed_to_another_channel() -> None:
     payload = PublishStatement(FILENAME, DIGEST, CHANNEL).payload()
 
     result = verify_bundles(
-        Sidecar("url", "cd" * 32, ("bundle",)),
+        Sidecar("cd" * 32, ("bundle",)),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=FakeVerifier({"bundle": verified(payload)}),
@@ -296,7 +299,7 @@ def test_direct_verification_rejects_artifact_changed_by_verifier(tmp_path) -> N
 
     result = verify_artifact(
         artifact,
-        Sidecar("bundle", "cd" * 32, ("bundle",)),
+        Sidecar("cd" * 32, ("bundle",)),
         verifier=MutatingVerifier(),
         channel=CHANNEL,
     )
@@ -318,7 +321,6 @@ def test_local_trust_configuration_is_bounded(tmp_path) -> None:
 def test_sigstore_parser_rejects_unsupported_bundle_media_type() -> None:
     result = verify_bundles(
         Sidecar(
-            "url",
             "cd" * 32,
             ('{"mediaType":"unsupported"}',),
         ),
@@ -333,7 +335,7 @@ def test_sigstore_parser_rejects_unsupported_bundle_media_type() -> None:
 
 def test_unsupported_dsse_payload_type_is_reported() -> None:
     result = verify_bundles(
-        Sidecar("url", "cd" * 32, ("bundle",)),
+        Sidecar("cd" * 32, ("bundle",)),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=FakeVerifier(
@@ -353,7 +355,7 @@ def test_unsupported_dsse_payload_type_is_reported() -> None:
 
 def test_malformed_in_toto_statement_is_reported() -> None:
     result = verify_bundles(
-        Sidecar("url", "cd" * 32, ("bundle",)),
+        Sidecar("cd" * 32, ("bundle",)),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=FakeVerifier({"bundle": verified(b"not JSON")}),
@@ -368,7 +370,7 @@ def test_unknown_predicate_is_reported() -> None:
     statement = PublishStatement(FILENAME, DIGEST).to_dict()
     statement["predicateType"] = "https://example.org/unknown"
     result = verify_bundles(
-        Sidecar("url", "cd" * 32, ("bundle",)),
+        Sidecar("cd" * 32, ("bundle",)),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=FakeVerifier({"bundle": verified(json.dumps(statement).encode())}),
@@ -383,7 +385,7 @@ def test_unknown_predicate_is_reported() -> None:
 def test_any_authenticated_signer_is_reported_without_authorization_claim() -> None:
     payload = PublishStatement(FILENAME, DIGEST, CHANNEL).payload()
     result = verify_bundles(
-        Sidecar("url", "cd" * 32, ("bundle",)),
+        Sidecar("cd" * 32, ("bundle",)),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=FakeVerifier(
@@ -391,8 +393,10 @@ def test_any_authenticated_signer_is_reported_without_authorization_claim() -> N
                 "bundle": CryptographicVerification(
                     InTotoStatement.PAYLOAD_TYPE,
                     payload,
-                    "https://github.com/not-the-publisher/workflow",
-                    ISSUER,
+                    SignerIdentity(
+                        "https://github.com/not-the-publisher/workflow",
+                        ISSUER,
+                    ),
                     ("time",),
                 )
             }
@@ -401,7 +405,7 @@ def test_any_authenticated_signer_is_reported_without_authorization_claim() -> N
     )
 
     assert result.status is VerificationStatus.VERIFIED
-    assert result.evidence[0].identity.endswith("not-the-publisher/workflow")
+    assert result.evidence[0].signer.identity.endswith("not-the-publisher/workflow")
     assert result.evidence[0].predicate_type == PublishStatement.PREDICATE_TYPE
     assert result.evidence[0].timestamps == ("time",)
     assert result.evidence[0].verified
@@ -411,7 +415,7 @@ def test_any_authenticated_signer_is_reported_without_authorization_claim() -> N
 def test_explicit_identity_and_issuer_authorize_exact_signer() -> None:
     payload = PublishStatement(FILENAME, DIGEST, CHANNEL).payload()
     result = verify_bundles(
-        Sidecar("url", "cd" * 32, ("bundle",)),
+        Sidecar("cd" * 32, ("bundle",)),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=FakeVerifier({"bundle": verified(payload)}),
@@ -420,7 +424,7 @@ def test_explicit_identity_and_issuer_authorize_exact_signer() -> None:
     )
 
     assert result.status is VerificationStatus.VERIFIED
-    assert result.authorization is AuthorizationStatus.VERIFIED
+    assert result.authorization == "verified"
     assert result.to_dict()["authorization"] == "verified"
 
 
@@ -436,7 +440,7 @@ def test_explicit_identity_rejects_other_signer_without_hiding_evidence(
 ) -> None:
     payload = PublishStatement(FILENAME, DIGEST, CHANNEL).payload()
     result = verify_bundles(
-        Sidecar("url", "cd" * 32, ("bundle",)),
+        Sidecar("cd" * 32, ("bundle",)),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=FakeVerifier({"bundle": verified(payload)}),
@@ -445,18 +449,17 @@ def test_explicit_identity_rejects_other_signer_without_hiding_evidence(
     )
 
     assert result.status is VerificationStatus.UNTRUSTED_IDENTITY
-    assert result.authorization is AuthorizationStatus.FAILED
+    assert result.authorization == "failed"
     assert result.to_dict()["expected_signer"] == expected_signer.to_dict()
     assert result.evidence[0].verified
-    assert result.evidence[0].identity == IDENTITY
-    assert result.evidence[0].issuer == ISSUER
+    assert result.evidence[0].signer == SignerIdentity(IDENTITY, ISSUER)
     assert result.failures[0].code == "untrusted-identity"
 
 
 def test_unavailable_sibling_takes_precedence_over_untrusted_identity() -> None:
     payload = PublishStatement(FILENAME, DIGEST, CHANNEL).payload()
     result = verify_bundles(
-        Sidecar("url", "cd" * 32, ("untrusted", "unavailable")),
+        Sidecar("cd" * 32, ("untrusted", "unavailable")),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=FakeVerifier(
@@ -479,7 +482,7 @@ def test_unavailable_sibling_takes_precedence_over_untrusted_identity() -> None:
 
 def test_missing_offline_trust_material_is_evidence_unavailable() -> None:
     result = verify_bundles(
-        Sidecar("url", "cd" * 32, ("bundle",)),
+        Sidecar("cd" * 32, ("bundle",)),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=FakeVerifier(
@@ -507,14 +510,14 @@ def test_slsa_provenance_preserves_untrusted_signer_evidence() -> None:
         }
     ).encode()
     result = verify_bundles(
-        Sidecar("url", "cd" * 32, ("bundle",)),
+        Sidecar("cd" * 32, ("bundle",)),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=FakeVerifier({"bundle": verified(payload)}),
         expected_signer=SignerIdentity("publisher@example.org", ISSUER),
     )
     assert result.status is VerificationStatus.INVALID
-    assert result.authorization is AuthorizationStatus.FAILED
+    assert result.authorization == "failed"
     assert result.evidence[0].verified
     assert (
         result.evidence[0].details["provenance"]["builder"]
@@ -542,7 +545,7 @@ def test_unrelated_slsa_provenance_is_not_reported_for_package() -> None:
         }
     ).encode()
     result = verify_bundles(
-        Sidecar("url", "cd" * 32, ("bundle",)),
+        Sidecar("cd" * 32, ("bundle",)),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=FakeVerifier({"bundle": verified(payload)}),
@@ -574,7 +577,6 @@ def test_captured_prefix_bundle_verifies_offline() -> None:
 
     result = verify_bundles(
         Sidecar(
-            "https://prefix.dev/actionlint.v0.sigs",
             sidecar_sha256,
             (bundle_json,),
             prefix_sidecar=True,
@@ -587,7 +589,7 @@ def test_captured_prefix_bundle_verifies_offline() -> None:
         channel="https://prefix.dev/github-releases",
     )
     assert result.status is VerificationStatus.VERIFIED
-    assert result.evidence[0].identity == expected_identity
+    assert result.evidence[0].signer.identity == expected_identity
     assert "2026-03-31T02:58:32Z" in result.evidence[0].timestamps
     assert result.evidence[0].predicate_type == PublishStatement.PREDICATE_TYPE
     assert result.to_dict()["authorization"] == "not-evaluated"

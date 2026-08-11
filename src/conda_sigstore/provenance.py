@@ -122,7 +122,6 @@ class SlsaProvenance:
             "builder": self.builder_id,
             "build_type": self.build_type,
             "invocation": self.invocation_id,
-            "source": None,
             "materials": [
                 {"uri": uri, "digest": dict(digest)} for uri, digest in self.materials
             ],

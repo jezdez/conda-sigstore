@@ -100,8 +100,7 @@ class FakeVerifier:
         return CryptographicVerification(
             self.payload_type,
             self.payloads[bundle_json],
-            identity.identity,
-            identity.issuer,
+            identity,
             ("signed-time",),
         )
 
@@ -704,7 +703,7 @@ def test_repodata_audit_uses_pinned_cached_sidecar(
     result = auditor.audit_record(record)
 
     assert result.status is VerificationStatus.VERIFIED
-    assert result.evidence[0].identity == "publisher@example.org"
+    assert result.evidence[0].signer.identity == "publisher@example.org"
     assert result.to_dict()["authorization"] == "not-evaluated"
 
 
