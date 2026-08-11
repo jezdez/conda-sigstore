@@ -4,7 +4,7 @@ This checklist records the full repository review completed on 2026-08-11. Each 
 
 ## Release contract
 
-- [ ] 1. Stop registering or documenting install enforcement until conda provides both the package-verifier hook and opaque `PackageRecord.attestations` preservation. Replace simulated future-hook tests with tests of the currently supported entry point.
+- [x] 1. Stop registering or documenting install enforcement until conda provides both the package-verifier hook and opaque `PackageRecord.attestations` preservation. Replace simulated future-hook tests with tests of the currently supported entry point.
 
 ## Correctness and security
 

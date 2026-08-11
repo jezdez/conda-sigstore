@@ -52,21 +52,13 @@ Automatic offline retrieval is available only for `repodata` sidecars whose
 descriptor provides the cache digest. Prefix `.v0.sigs` sidecars are unpinned
 Prefix.dev inputs and must be supplied explicitly.
 
-## Enforce installation offline
+## Future offline installation enforcement
 
-Use the same flat setting:
-
-```console
-CONDA_OFFLINE=true \
-CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true \
-conda install PACKAGE
-```
-
-Every selected package must have a preserved repodata descriptor, a retained
-archive, the exact sidecar bytes in the content-addressed cache, and available
-Sigstore trust material. A cache miss, a `MatchSpec`, or an extracted-only cache
-entry fails closed. The verifier never makes a network request, substitutes an
-evidence source, or falls back to Prefix.dev `.v0.sigs` input.
+Install enforcement is not registered in current releases. Once the required
+conda contracts ship, offline enforcement will require every selected package
+to have a preserved repodata descriptor, retained archive, exact cached
+sidecar, and available Sigstore trust material. A cache miss, `MatchSpec`, or
+extracted-only cache entry must fail closed.
 
 ## Plan trust-root updates
 

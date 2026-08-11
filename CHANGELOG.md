@@ -25,9 +25,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   attestation publishing.
 - Optional exact signer identity and OIDC issuer verification for
   `conda sigstore verify`.
-- Disabled-by-default install verification through conda's required
-  package-verifier hook. The verifier requires valid repodata-advertised CEP 27
-  evidence without treating the signer as an authorized publisher.
+- An unregistered install-verifier adapter for the future conda hook and
+  repodata record-preservation contracts.
 - Rich terminal rendering for human-readable command output.
 
 [Unreleased]: https://github.com/jezdez/conda-sigstore/commits/main

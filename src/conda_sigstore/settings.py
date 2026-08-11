@@ -13,7 +13,6 @@ if TYPE_CHECKING:
     from conda.plugins.types import CondaSetting
 
 SETTING_NAME = "conda_sigstore"
-ENFORCE_SETTING_NAME = "conda_sigstore_enforce"
 DEFAULT_MAX_SIDECAR_BYTES = 10 * 1024 * 1024
 
 
@@ -101,7 +100,6 @@ class SigstoreSettings:
 
 __all__ = [
     "DEFAULT_MAX_SIDECAR_BYTES",
-    "ENFORCE_SETTING_NAME",
     "SETTING_NAME",
     "SigstoreSettings",
 ]

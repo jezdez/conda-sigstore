@@ -62,11 +62,11 @@ One valid artifact-bound CEP 27 bundle is sufficient for a verified result.
 Malformed or unrelated siblings remain visible but do not create a denial of
 service against a valid sibling. A malformed sidecar container still fails.
 
-## Install verification flow
+## Future install verification flow
 
-Install verification is a separate, opt-in consumer path. Installing the
-plugin leaves it disabled. The flat `plugins.conda_sigstore_enforce` setting
-conditionally registers conda's package verifier.
+Install verification is not registered in the current release. The adapter is
+retained for the conda package-verifier and record-preservation contracts that
+remain upstream work.
 
 For each selected package, the verifier:
 
@@ -77,8 +77,8 @@ For each selected package, the verifier:
 5. performs normal Sigstore and CEP 27 verification
 6. accepts when at least one valid CEP 27 statement binds the exact artifact
 
-Missing evidence and `MatchSpec` inputs fail closed. The verifier never probes
-for an undeclared `.sigs` file and never consumes Prefix.dev `.v0.sigs`
+Missing evidence and `MatchSpec` inputs will fail closed. The verifier will
+never probe for an undeclared `.sigs` file or consume Prefix.dev `.v0.sigs`
 sidecars. It authenticates the bundle signer but does not treat that identity as
 an authorized publisher.
 
@@ -103,8 +103,8 @@ fallback.
 ## Cache design
 
 Repodata-advertised sidecar bytes are content-addressed and rehashed on every
-read. An extracted-only package cache entry cannot satisfy install verification
-because the archive bytes are unavailable.
+read. A future install verifier cannot accept an extracted-only package cache
+entry because the archive bytes are unavailable.
 
 ## Separate evidence classes
 

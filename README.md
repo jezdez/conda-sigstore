@@ -55,9 +55,9 @@ pixi run -e test conda sigstore --help
 Direct `pip install` into an unrelated Python environment does not register the
 plugin with the conda installation you use.
 
-Installing the plugin does not change package operations. Install verification
-is disabled by default. The plugin requires conda's package-verifier hook and
-preservation of repodata attestation descriptors.
+Installing the plugin does not change package operations. Released conda
+versions do not yet provide the package-verifier hook and repodata descriptor
+preservation required for install enforcement.
 
 ## Commands
 
@@ -88,23 +88,11 @@ an authorized publisher.
 The plugin reports signer evidence and can apply an exact signer requirement to
 one explicit verification. It does not discover channel publisher delegation.
 
-Enable strict evidence validation for one command:
-
-```console
-CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true conda install PACKAGE
-```
-
-This mode requires repodata to advertise a `.sigs` sidecar and requires at
-least one valid CEP 27 statement for the exact package filename and SHA-256.
-Missing or unavailable evidence, malformed descriptors, invalid bundles, and
-target-channel mismatches fail before that package is extracted. Explicit and
-local inputs represented only by a `MatchSpec` also fail because they have no
-repodata descriptor. The install verifier never probes for or consumes
-Prefix.dev `.v0.sigs` sidecars.
-
-A successful install check cryptographically authenticates the bundle signer.
-It does not establish that the channel authorized that signer. Publisher
-authorization still needs a standard channel-publisher delegation contract.
+Install enforcement is not registered in the current release. The future
+adapter will require repodata-advertised evidence only after conda releases
+both the pre-extraction verifier hook and opaque attestation descriptor
+preservation. Publisher authorization still needs a standard
+channel-publisher delegation contract.
 
 The required upstream contracts are documented in
 [Upstream integration contracts](https://jezdez.github.io/conda-sigstore/reference/upstream-contracts/).

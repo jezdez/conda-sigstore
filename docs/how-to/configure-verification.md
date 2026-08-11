@@ -1,8 +1,8 @@
 # Configure verification
 
 `conda-sigstore` uses Sigstore's production trust configuration and a 10 MiB
-sidecar limit by default. Install verification is disabled. No `.condarc` entry
-is required.
+sidecar limit by default. Install enforcement is not registered in current
+releases. No `.condarc` entry is required.
 
 The optional `plugins.conda_sigstore` setting controls only operational inputs:
 
@@ -15,42 +15,6 @@ plugins:
 
 It does not contain publisher identities, package rules, transport selection,
 or install-verifier activation.
-
-## Require evidence for one package operation
-
-Use conda's environment variable for the flat activation setting:
-
-```console
-CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true conda install PACKAGE
-```
-
-The plugin requires conda's package-verifier hook and preservation of repodata
-attestation descriptors. Every selected package must have a
-repodata-advertised `.sigs` sidecar containing at least one valid CEP 27
-statement for its exact filename and SHA-256.
-
-The operation fails if evidence is missing, unavailable, malformed, invalid, or
-bound to another artifact or target channel. Local files and other explicit
-inputs represented by a `MatchSpec` fail because they have no repodata
-descriptor. The install verifier does not probe for an undeclared `.sigs` file
-and never uses Prefix.dev `.v0.sigs` sidecars.
-
-## Enable verification persistently
-
-Set the flat plugin setting with conda's configuration command:
-
-```console
-conda config --set plugins.conda_sigstore_enforce true
-```
-
-Disable it again with:
-
-```console
-conda config --set plugins.conda_sigstore_enforce false
-```
-
-Persistent activation is global to every package operation that uses that
-configuration source. Installing the plugin alone does not activate it.
 
 ## Change the input limit
 
@@ -92,9 +56,9 @@ issuer without turning local configuration into an invented authorization
 protocol. Use the paired `verify --cert-identity` and `--cert-oidc-issuer`
 options for an explicit one-off signer requirement.
 
-The install verifier therefore enforces evidence validity and coverage, not
-signer authorization. Any Sigstore identity with a valid, exact artifact-bound
-CEP 27 statement can satisfy the install check.
+The future install verifier will enforce evidence validity and coverage, not
+signer authorization. It is not registered until conda releases the required
+hook and record-preservation contracts.
 
 See [Configuration](../reference/configuration.md) for the exact setting
 contract and [Security model](../explanation/security-model.md) for the trust

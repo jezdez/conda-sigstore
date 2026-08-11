@@ -60,26 +60,22 @@ An installation decision has two independent parts:
    to publish this package to this channel and what the absence of evidence
    means.
 
-`conda-sigstore` implements the first part for explicit verification and for an
-optional install check. It does not invent the second part. CEP 27 defines the
-signed publication statement, but no accepted conda standard currently
-distributes channel publisher delegation to clients.
+`conda-sigstore` implements the first part for explicit verification. It does
+not invent the second part. CEP 27 defines the signed publication statement,
+but no accepted conda standard currently distributes channel publisher
+delegation to clients.
 
-The install check is disabled by default. Enabling
-`plugins.conda_sigstore_enforce` means the user requires evidence coverage for
-every selected package. It does not mean the channel authorized the signer.
+The future verifier uses only a repodata `attestations` descriptor preserved on
+the selected `PackageRecord`. It fetches `<artifact>.sigs`, validates the
+advertised size and SHA-256 before parsing, verifies the Sigstore material, and
+requires at least one strict CEP 27 statement for the exact artifact filename
+and SHA-256. An included target-channel claim must match the selected channel.
 
-The verifier uses only a repodata `attestations` descriptor preserved on the
-selected `PackageRecord`. It fetches `<artifact>.sigs`, validates the advertised
-size and SHA-256 before parsing, verifies the Sigstore material, and requires at
-least one strict CEP 27 statement for the exact artifact filename and SHA-256.
-An included target-channel claim must match the selected channel.
-
-Missing, unavailable, malformed, invalid, or nonmatching evidence fails closed.
-A `MatchSpec` also fails closed because it does not carry a repodata descriptor.
-That includes local files and explicit URLs which cannot prove which channel
-metadata selected their evidence. The verifier never probes for a sidecar and
-never uses Prefix.dev `.v0.sigs` compatibility input.
+Missing, unavailable, malformed, invalid, or nonmatching evidence will fail
+closed. A `MatchSpec` will also fail because it does not carry a repodata
+descriptor. That includes local files and explicit URLs which cannot prove
+which channel metadata selected their evidence. The verifier will never probe
+for a sidecar or use Prefix.dev `.v0.sigs` compatibility input.
 
 This behavior requires two conda changes that are not available in current
 released conda versions:
@@ -89,10 +85,10 @@ released conda versions:
 - provide an always-run package verifier after artifact digest validation and
   before extraction, independent of `safety_checks`
 
-The hook prevents the rejected archive from being extracted and fails the
-fetch and extraction phase before prefix unlink or link actions. Other package
-archives can already have completed cache extraction because those operations
-run concurrently.
+Once both contracts ship, the hook must prevent the rejected archive from being
+extracted and fail before prefix unlink or link actions. Other package archives
+can already have completed cache extraction because those operations run
+concurrently.
 
 Rejecting a cryptographically valid signer as unauthorized still requires a
 standardized channel delegation that identifies authorized publishers.

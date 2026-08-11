@@ -69,21 +69,7 @@ Check the reported artifact digest, signer identity, issuer, predicate,
 timestamps, and target channel. This confirms the evidence but does not prove
 that the signer was authorized by the channel.
 
-## 5. Test install verification
-
-Require evidence for a test installation:
-
-```console
-CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true \
-conda install --channel CHANNEL PACKAGE
-```
-
-The operation fails if any selected package lacks a descriptor or valid,
-artifact-bound CEP 27 evidence. Test in an isolated channel whose complete
-dependency closure has sidecars. The result validates evidence but does not
-authorize the reported signer.
-
-## 6. Keep transport choice explicit
+## 5. Keep transport choice explicit
 
 If a channel serves both forms:
 

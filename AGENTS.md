@@ -2,9 +2,9 @@
 
 ## Project structure
 
-- The package provides one `conda sigstore` subcommand and one opt-in package
-  verifier through one conda plugin entry point. Install verification enforces
-  evidence validity, not publisher authorization.
+- The package provides one `conda sigstore` subcommand through one conda plugin
+  entry point. The unregistered install adapter is retained for the future
+  conda package-verifier and record-preservation contracts.
 
 - Source lives under `src/conda_sigstore/`. Keep each module responsible for
   one concern:
@@ -13,9 +13,8 @@
   - `cli/attest.py`, `cli/verify.py`, and `cli/audit.py` own their command
     handlers. `cli/output.py` owns shared Rich rendering, while
     `cli/__init__.py` is a thin re-export shim.
-  - `settings.py` owns operational limits, optional Sigstore trust
-    configuration, and the flat install-verifier activation setting. It does
-    not define publisher authorization.
+  - `settings.py` owns operational limits and optional Sigstore trust
+    configuration. It does not define publisher authorization.
   - `model.py` owns shared immutable evidence and result models.
   - `exceptions.py` owns publish-statement, provenance, transport, bundle
     verification, and trust-material errors.
@@ -26,8 +25,9 @@
     repodata-advertised `.sigs`, and Prefix.dev sidecar loading.
   - `verification.py` owns Sigstore cryptographic verification followed by CEP
     27 and artifact-binding checks.
-  - `install.py` adapts the repodata verifier to conda's required
-    pre-extraction package-verifier hook.
+  - `install.py` contains the future adapter for conda's pre-extraction
+    package-verifier hook. Do not register it before the required conda record
+    and hook contracts are released.
   - `cache.py` owns content-addressed sidecars.
   - `audit.py` owns installed-environment and source-evidence auditing.
   - `provenance.py` owns factual parsing of separate provenance evidence.
@@ -66,12 +66,12 @@
 
 - Importing the conda entry point must not load Sigstore trust material, perform
   network access, create cache directories, inspect package archives, or import
-  Rich or command implementations eagerly. With `conda_sigstore_enforce`
-  disabled, ordinary conda commands must remain a cheap no-op for this plugin.
+  Rich or command implementations eagerly. Ordinary conda commands must remain
+  a cheap no-op for this plugin.
 
 - Keep `plugin.py` declarative. Hook registration may import lightweight conda
   hook types, but trust-root loading, sidecar access, and verification stay
-  behind the invoked command or enabled package-verifier callback.
+  behind the invoked command.
 
 ## Dependencies
 
@@ -184,19 +184,13 @@
   lifecycle behavior that conda already owns.
 
 - Register behavior only through the `[project.entry-points.conda]` entry point
-  and supported pluggy hooks. Keep one `conda sigstore` subcommand, one
-  structured `plugins.conda_sigstore` setting for operational inputs, and one
-  flat `plugins.conda_sigstore_enforce` boolean for package-verifier activation.
-  The boolean defaults to false.
+  and supported pluggy hooks. Keep one `conda sigstore` subcommand and one
+  structured `plugins.conda_sigstore` setting for operational inputs.
 
-- Register the package verifier only when `conda_sigstore_enforce` is true and
-  require the selected `PackageRecord` to preserve the repodata `attestations`
-  descriptor. Missing descriptors and `MatchSpec` inputs fail closed. Install
-  verification never probes for or consumes Prefix.dev `.v0.sigs` sidecars.
-
-- The conda package-verifier hook is a required dependency contract. Do not
-  mark its hook implementation optional or add a pre-command compatibility
-  guard.
+- Do not register install verification until conda releases both the
+  package-verifier hook and opaque `PackageRecord.attestations` preservation.
+  Do not substitute an optional hook, pre-command compatibility guard, or
+  transaction hook.
 
 - Treat JSON as an output contract. Machine-readable output must contain one
   stable, unstyled JSON value on stdout and must not be mixed with human status
@@ -235,10 +229,10 @@
   before parsing. Never probe for an undeclared sidecar. Refer to the proposal
   as `conda/ceps#142` or the draft repodata transport.
 
-- When install verification is enabled, require one cryptographically valid,
-  exact artifact-bound CEP 27 statement from the repodata-advertised sidecar.
-  Missing, unavailable, malformed, invalid, or nonmatching evidence fails the
-  package. This does not authorize the signer.
+- The future install verifier must require one cryptographically valid, exact
+  artifact-bound CEP 27 statement from the repodata-advertised sidecar.
+  Missing, unavailable, malformed, invalid, or nonmatching evidence must fail
+  the package. This does not authorize the signer.
 
 - Keep Prefix.dev `.v0.sigs` support explicit through a direct bundle URL or
   the `--prefix-sidecars` audit flag. The sidecar is not integrity-bound by

@@ -28,44 +28,12 @@ def conda_subcommands() -> Iterable[CondaSubcommand]:
 
 @hookimpl
 def conda_settings() -> Iterable[CondaSetting]:
-    from conda.common.configuration import PrimitiveParameter
-    from conda.plugins.types import CondaSetting
-
-    from .settings import ENFORCE_SETTING_NAME, SigstoreSettings
+    from .settings import SigstoreSettings
 
     yield SigstoreSettings.conda_setting()
-    yield CondaSetting(
-        name=ENFORCE_SETTING_NAME,
-        description="Require valid Sigstore evidence before package extraction.",
-        parameter=PrimitiveParameter(
-            False,
-            element_type=bool,
-        ),
-    )
-
-
-@hookimpl
-def conda_package_verifiers() -> Iterable[object]:
-    from conda.base.context import context
-
-    from .settings import ENFORCE_SETTING_NAME
-
-    if not getattr(context.plugins, ENFORCE_SETTING_NAME, False):
-        return
-
-    from conda.plugins import types
-
-    from .install import InstallVerifier
-
-    verifier_type = getattr(types, "CondaPackageVerifier")
-    yield verifier_type(
-        name="sigstore",
-        verify=InstallVerifier.current().verify,
-    )
 
 
 __all__ = [
-    "conda_package_verifiers",
     "conda_settings",
     "conda_subcommands",
 ]

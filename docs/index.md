@@ -39,7 +39,7 @@ Create, inspect, and verify package publication attestations.
 :link: how-to/configure-verification
 :link-type: doc
 
-Configure inputs and install verification, publish sidecars, and work offline.
+Configure verification inputs, publish sidecars, and work offline.
 :::
 
 :::{grid-item-card} {octicon}`list-unordered` Reference
@@ -83,11 +83,10 @@ not identify which admitted bundle represents an authorized publisher.
 requirement to one explicit verification. It does not discover channel
 publisher delegation.
 
-Install verification is disabled by default. The flat
-`plugins.conda_sigstore_enforce` setting requires valid repodata-advertised CEP
-27 evidence before extraction. Missing evidence and inputs without a preserved
-`PackageRecord` fail closed. This validates evidence, but does not authorize
-the signer. The verifier never uses Prefix.dev `.v0.sigs` sidecars. See
+Install enforcement is not registered in the current release. It requires two
+upstream conda contracts before it can safely validate repodata-advertised CEP
+27 evidence before extraction. This validates evidence, but does not authorize
+the signer. See
 [Installation verification across package managers](explanation/install-verification.md)
 for the current pip, uv, Pixi, and conda comparison.
 

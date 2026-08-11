@@ -4,11 +4,9 @@ import builtins
 import importlib
 import socket
 import sys
-from dataclasses import dataclass
 from types import SimpleNamespace
 
 import conda.base.context
-import conda.plugins.types
 
 from conda_sigstore import plugin
 
@@ -20,7 +18,8 @@ def test_registers_subcommand_and_settings() -> None:
     assert subcommand.name == "sigstore"
     assert callable(subcommand.action)
     assert callable(subcommand.configure_parser)
-    assert settings == {"conda_sigstore", "conda_sigstore_enforce"}
+    assert settings == {"conda_sigstore"}
+    assert not hasattr(plugin, "conda_package_verifiers")
     assert not hasattr(plugin, "conda_pre_commands")
     assert not hasattr(plugin, "conda_pre_transaction_actions")
 
@@ -31,7 +30,6 @@ def test_plugin_hooks_are_startup_safe(monkeypatch) -> None:
         "conda_sigstore.cli.audit",
         "conda_sigstore.cli.output",
         "conda_sigstore.cli.verify",
-        "conda_sigstore.install",
     }
     for module in command_modules:
         monkeypatch.delitem(sys.modules, module, raising=False)
@@ -61,7 +59,6 @@ def test_plugin_hooks_are_startup_safe(monkeypatch) -> None:
     importlib.reload(plugin)
     tuple(plugin.conda_subcommands())
     tuple(plugin.conda_settings())
-    assert tuple(plugin.conda_package_verifiers()) == ()
 
     imported_after = {
         name
@@ -70,45 +67,3 @@ def test_plugin_hooks_are_startup_safe(monkeypatch) -> None:
     }
     assert imported_after == imported_before
     assert command_modules.isdisjoint(sys.modules)
-
-
-def test_enforcement_registers_future_package_verifier(monkeypatch) -> None:
-    from conda_sigstore.install import InstallVerifier
-
-    calls = []
-
-    class RecordingVerifier:
-        def verify(self, *args):
-            calls.append(args)
-
-    verifier = RecordingVerifier()
-
-    @dataclass
-    class CondaPackageVerifier:
-        name: str
-        verify: object
-
-    monkeypatch.setattr(
-        conda.base.context,
-        "context",
-        SimpleNamespace(
-            plugins=SimpleNamespace(conda_sigstore_enforce=True),
-        ),
-    )
-    monkeypatch.setattr(
-        conda.plugins.types,
-        "CondaPackageVerifier",
-        CondaPackageVerifier,
-        raising=False,
-    )
-    monkeypatch.setattr(
-        InstallVerifier,
-        "current",
-        classmethod(lambda cls: verifier),
-    )
-
-    (registered,) = plugin.conda_package_verifiers()
-    registered.verify("record", "archive", "ab" * 32)
-
-    assert registered.name == "sigstore"
-    assert calls == [("record", "archive", "ab" * 32)]

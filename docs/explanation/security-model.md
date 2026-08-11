@@ -58,8 +58,8 @@ valid signature makes package contents safe.
 | Artifact substitution | CEP 27 subject SHA-256 must match exact artifact bytes | SHA-256 or signer compromise |
 | Repodata sidecar substitution | Repodata advertises exact size and SHA-256 before parsing | Compromised or unauthenticated repodata |
 | Prefix.dev sidecar substitution | Bundle still binds the package digest | No repodata commitment to the selected sidecar |
-| Missing install evidence | Enabled install verification fails closed without a repodata descriptor | A channel can make packages unavailable by omitting evidence |
-| Install transport downgrade | The package verifier uses only the advertised `.sigs` sidecar | Prefix.dev compatibility remains available only to explicit commands |
+| Missing future install evidence | The future verifier fails closed without a repodata descriptor | A channel can make packages unavailable by omitting evidence |
+| Future install transport downgrade | The future verifier uses only the advertised `.sigs` sidecar | Prefix.dev compatibility remains available only to explicit commands |
 | Cross-channel replay | An included `targetChannel` must match the supplied channel | CEP 27 permits an absent target channel |
 | Transparency-log omission | Sigstore verification requires supported verification material | Trust-root or verifier compromise |
 | Converted PyPI bundle without canonical Rekor entry | Verification fails closed without authenticated conversion provenance | A future standard must define the exception |
@@ -89,9 +89,10 @@ install verifier requires evidence but accepts any signer whose Sigstore bundle
 and exact artifact-bound CEP 27 statement are valid. That is evidence-validity
 enforcement, not publisher authorization.
 
-The plugin requires conda to preserve the repodata attestation descriptor and
-provide the always-run package-verifier hook. When enabled, missing evidence
-and inputs represented only by a `MatchSpec` fail closed.
+The plugin does not register install enforcement until conda preserves the
+repodata attestation descriptor and provides the always-run package-verifier
+hook. The future verifier fails closed for missing evidence and inputs
+represented only by a `MatchSpec`.
 
 ## Offline risk
 

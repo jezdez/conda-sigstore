@@ -94,27 +94,6 @@ package was verified before extraction or installation.
 
 ## Ordinary package operations
 
-Install verification is disabled by default. Enable it with the flat
-`plugins.conda_sigstore_enforce` setting or its environment variable:
-
-```console
-CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true conda install PACKAGE
-```
-
-The verifier requires every selected package to be a `PackageRecord` with a
-repodata `attestations` descriptor. It fetches only the advertised `.sigs`
-sidecar, checks its exact size and SHA-256, verifies every Sigstore bundle, and
-requires at least one valid CEP 27 statement bound to the callback's artifact
-filename and SHA-256. An included `targetChannel` must match the selected
-channel.
-
-Missing evidence, retrieval failure, malformed evidence, invalid evidence, and
-`MatchSpec` inputs fail the package operation before that package is extracted.
-This includes local files and explicit URLs that do not carry a preserved
-repodata record. The verifier never probes for a sidecar and never uses
-Prefix.dev `.v0.sigs` sidecars.
-
-The check cryptographically authenticates the bundle signer. It does not
-authorize that identity as a channel publisher. See
-[Upstream integration contracts](upstream-contracts.md) for the remaining
-conda and channel contracts.
+The current plugin does not modify ordinary package operations. Install
+enforcement awaits the conda hook and record-preservation work listed in
+[Upstream integration contracts](upstream-contracts.md).

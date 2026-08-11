@@ -78,16 +78,16 @@ When only an extracted cache entry remains, the verifier must be able to force
 an online redownload or fail offline. A package record digest cannot
 authenticate extracted contents.
 
-`conda-sigstore` requires this boundary and does not substitute a transaction
-hook. With `conda_sigstore_enforce` disabled, it performs no Sigstore work
-during ordinary installation.
+`conda-sigstore` does not register install enforcement before this boundary and
+the record-preservation contract are released. It does not substitute a
+transaction hook.
 
 This verifier does not need publisher delegation merely to reject advertised
 evidence that is malformed, cryptographically invalid, or bound to different
-artifact bytes. Enabling `conda_sigstore_enforce` also makes a missing descriptor
-a failure. That is an explicit consumer requirement for evidence coverage, not
-a claim that the channel authorized the signer. Rejecting a valid signer as
-unauthorized needs the separate delegation contract above.
+artifact bytes. A future requirement for evidence coverage also makes a missing
+descriptor a failure. That is not a claim that the channel authorized the
+signer. Rejecting a valid signer as unauthorized needs the separate delegation
+contract above.
 
 ## Publisher tooling
 
