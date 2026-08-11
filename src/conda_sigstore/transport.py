@@ -12,14 +12,14 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlsplit, urlunsplit
 
 from .exceptions import TransportError
-from .model import AttestationDescriptor, Sidecar
+from .model import Sidecar
 from .settings import DEFAULT_MAX_SIDECAR_BYTES
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
     from typing import NoReturn
 
     from .cache import DigestCache
+    from .model import AttestationDescriptor
 
 
 Fetch = Callable[[str, int], bytes]
@@ -250,6 +250,8 @@ class SidecarTransport:
             label = path.name
             try:
                 body = read_bounded_file(path, self.max_bytes, description="bundle")
+            except ValueError as exc:
+                raise TransportError("sidecar-too-large", str(exc)) from exc
             except OSError as exc:
                 raise TransportError(
                     "retrieval-failed",
@@ -265,14 +267,9 @@ class SidecarTransport:
     def load_repodata(
         self,
         artifact_url: str,
-        descriptor: AttestationDescriptor | Mapping[str, object],
+        descriptor: AttestationDescriptor,
     ) -> Sidecar:
         """Load an integrity-bound ``.sigs`` file advertised by repodata."""
-        if not isinstance(descriptor, AttestationDescriptor):
-            try:
-                descriptor = AttestationDescriptor.from_mapping(descriptor)
-            except ValueError as exc:
-                raise TransportError("invalid-descriptor", str(exc)) from exc
         if descriptor.size > self.max_bytes:
             raise TransportError(
                 "sidecar-too-large",
