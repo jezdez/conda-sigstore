@@ -30,7 +30,7 @@ This checklist records the full repository review completed on 2026-08-11. Each 
 
 ## Tests, CI, and documentation
 
-- [ ] 18. Add real installed-entry-point command coverage and retain the unavailable transaction matrix as an explicit upstream prerequisite.
+- [x] 18. Add real installed-entry-point command coverage and retain the unavailable transaction matrix as an explicit upstream prerequisite.
 - [ ] 19. Run coverage in one CI matrix job and publish the report.
 - [ ] 20. Correct install, sidecar digest, offline cache, tutorial, and Prefix workflow documentation.
 

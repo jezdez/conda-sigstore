@@ -4,8 +4,8 @@ The plugin verifies that a Sigstore-authenticated identity signed a strict CEP
 27 statement for exact conda package bytes. It reports that identity and the
 available evidence. An explicit verification may require an exact identity and
 issuer supplied independently by the operator. The plugin does not discover a
-channel's publisher delegation. Its optional install verifier enforces valid
-repodata-advertised evidence without authorizing the signer.
+channel's publisher delegation. A future, unregistered install verifier would
+enforce valid repodata-advertised evidence without authorizing the signer.
 
 ## Protected assets
 
@@ -84,10 +84,10 @@ The plugin rejects two unsafe shortcuts:
 - asking every consumer to maintain package and identity allowlists in
   `.condarc`
 
-It also does not assume undocumented channel admission behavior. The optional
-install verifier requires evidence but accepts any signer whose Sigstore bundle
-and exact artifact-bound CEP 27 statement are valid. That is evidence-validity
-enforcement, not publisher authorization.
+It also does not assume undocumented channel admission behavior. The future,
+unregistered install verifier would require evidence but accept any signer
+whose Sigstore bundle and exact artifact-bound CEP 27 statement are valid. That
+would be evidence-validity enforcement, not publisher authorization.
 
 The plugin does not register install enforcement until conda preserves the
 repodata attestation descriptor and provides the always-run package-verifier

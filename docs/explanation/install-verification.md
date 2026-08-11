@@ -13,7 +13,7 @@ to publish a package.
 | pip | Checks an index-advertised download hash for corruption. `--require-hashes` requires locally supplied hashes for all resolved requirements. | None. PyPI documents a separate `pypi-attestations verify pypi` command for consumer verification. |
 | uv | Records selected index hashes in `uv.lock` and verifies hashes supplied in requirements files. `--require-hashes` requires complete hash coverage. | None. `uv publish` discovers and uploads adjacent PEP 740 attestations, but does not generate them or verify them during installation. |
 | Pixi | Verifies conda and PyPI package checksums recorded in `pixi.lock` when an artifact is installed or reused from cache. | None. Pixi creates or uploads Sigstore attestations for Prefix.dev publishing and documents external consumer verification with `gh` or `cosign`. |
-| conda with conda-sigstore | Conda retains its package digest checks. The package verifier receives conda's verified or computed SHA-256 before extraction. | An opt-in setting requires valid repodata-advertised CEP 27 evidence. It does not authorize the signer. |
+| conda with conda-sigstore | Conda retains its package digest checks. | No install-time attestation check is registered. A future package verifier requires upstream conda support. |
 
 The relevant primary documentation is:
 
@@ -49,7 +49,7 @@ low-level choice through paired `--cert-identity` and
 `--cert-oidc-issuer` options. They apply to one command and do not create
 channel policy.
 
-## What the install verifier checks
+## What a future install verifier must check
 
 An installation decision has two independent parts:
 

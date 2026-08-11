@@ -2,10 +2,17 @@ from __future__ import annotations
 
 import importlib
 from argparse import Namespace
+from typing import TYPE_CHECKING
 
 import pytest
 
 from conda_sigstore.cli import execute
+from conda_sigstore.exceptions import CondaSigstoreError
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from conda.testing.fixtures import CondaCLIFixture
 
 
 def test_parser_exposes_evidence_commands(sigstore_parser) -> None:
@@ -66,3 +73,62 @@ def test_execute_dispatches_to_command_module(
 def test_execute_rejects_unknown_command() -> None:
     with pytest.raises(AssertionError, match="unknown command: unknown"):
         execute(Namespace(sigstore_command="unknown"))
+
+
+def test_installed_entry_point_exposes_commands(
+    conda_cli: CondaCLIFixture,
+) -> None:
+    stdout, stderr, error = conda_cli(
+        "sigstore",
+        "--help",
+        raises=SystemExit,
+    )
+
+    assert error.value.code == 0
+    assert "usage: conda sigstore" in stdout
+    assert "{attest,verify,audit}" in stdout
+    assert "Sign and verify conda packages with Sigstore." in stdout
+    assert stderr == ""
+
+
+@pytest.mark.parametrize(
+    ("artifact_contents", "expected_code", "expected_message"),
+    [
+        pytest.param(
+            None,
+            "conda-sigstore",
+            "package does not exist:",
+            id="missing-artifact",
+        ),
+        pytest.param(
+            b"package",
+            "retrieval-failed",
+            "could not read bundle missing.json (FileNotFoundError)",
+            id="missing-bundle",
+        ),
+    ],
+)
+def test_installed_entry_point_reports_expected_failures(
+    conda_cli: CondaCLIFixture,
+    tmp_path: Path,
+    artifact_contents: bytes | None,
+    expected_code: str,
+    expected_message: str,
+) -> None:
+    artifact = tmp_path / "demo-1-0.conda"
+    if artifact_contents is not None:
+        artifact.write_bytes(artifact_contents)
+
+    stdout, stderr, error = conda_cli(
+        "sigstore",
+        "verify",
+        artifact,
+        "--bundle",
+        tmp_path / "missing.json",
+        raises=CondaSigstoreError,
+    )
+
+    assert stdout == ""
+    assert stderr == ""
+    assert error.value.code == expected_code
+    assert expected_message in str(error.value)

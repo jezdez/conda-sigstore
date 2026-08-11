@@ -56,7 +56,7 @@ more than one signer or countersignature without changing the package artifact.
 | `sigstore verify identity` | Verifies Sigstore material, an expected identity and issuer, and a matching in-toto subject digest | It does not enforce CEP 27's exact filename, single subject, predicate type, or target channel |
 | `conda sigstore attest` | Uses sigstore-python to DSSE-sign one strict CEP 27 statement | It creates evidence but does not upload it |
 | `conda sigstore verify` | Verifies Sigstore material, artifact binding, the full CEP 27 statement contract, and an optional exact signer requirement | It cannot discover a channel's publisher delegation |
-| `conda-sigstore` package verifier | Requires valid repodata-advertised CEP 27 evidence before extraction when explicitly enabled | It validates evidence but does not authorize the signer |
+| Future `conda-sigstore` package verifier | Would require valid repodata-advertised CEP 27 evidence before extraction | It is unregistered until conda provides the required contracts and would not authorize the signer |
 | Rattler-Build `--generate-attestation` | Creates one CEP 27 bundle per package and uploads it through Prefix Trusted Publishing | This is a Prefix-specific producer path |
 | `actions/attest` | Creates a custom Sigstore-backed in-toto attestation and stores it in GitHub | `subject-path` must resolve to one package for CEP 27 |
 | `gh attestation verify` | Retrieves GitHub-hosted evidence and applies GitHub owner and predicate criteria | It is not a replacement for CEP 27 target-channel validation |
@@ -151,10 +151,10 @@ The plugin therefore verifies evidence and reports the authenticated identity
 and issuer. An operator may apply an exact identity and issuer to one explicit
 verification, but that requirement is not channel policy.
 
-The optional install verifier can require evidence coverage without solving
-publisher delegation. Missing evidence fails because the consumer explicitly
-enabled the check. A valid signer still remains authenticated evidence rather
-than an authorized publisher.
+The future, unregistered install verifier could require evidence coverage
+without solving publisher delegation. Missing evidence would fail when the
+consumer enabled the check. A valid signer would still remain authenticated
+evidence rather than an authorized publisher.
 
 ## Out of scope for the first release
 

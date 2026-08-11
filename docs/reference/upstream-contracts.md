@@ -1,8 +1,8 @@
 # Upstream integration contracts
 
-The plugin signs, verifies, and audits evidence explicitly. Its disabled-by-
-default install verifier depends on coordinated conda, solver, and channel
-work. The verifier enforces evidence validity, not publisher authorization.
+The plugin signs, verifies, and audits evidence explicitly. Its unregistered
+install adapter depends on coordinated conda, solver, and channel work. A
+future verifier would enforce evidence validity, not publisher authorization.
 
 ## Package-record preservation
 
@@ -123,7 +123,12 @@ or invalid. This keeps the downgrade boundary visible.
 
 ## End-to-end conformance
 
-The conda and channel integration should demonstrate that:
+The following matrix is a prerequisite for registering the adapter. Exercise
+every applicable case with both package formats, classic and libmamba solves,
+monolithic and sharded repodata, authenticated channels and mirrors, and online
+and offline cache states.
+
+The conda and channel integration must demonstrate that:
 
 1. valid, exact artifact-bound CEP 27 evidence succeeds
 2. artifact substitution fails before extraction
@@ -133,8 +138,13 @@ The conda and channel integration should demonstrate that:
 6. classic and libmamba solver paths cannot bypass verification
 7. local-file and explicit `MatchSpec` inputs fail closed
 8. retained archives and `--download-only` cannot bypass verification
-9. strict failure causes zero unlink or link actions
-10. package-controlled code or files are never processed before the decision
+9. dry runs and remove-only transactions perform no package verification or
+   prefix mutation
+10. force reinstalls reverify the incoming archive
+11. verification remains mandatory when `safety_checks` and transaction
+    rollback are disabled
+12. strict failure causes zero unlink or link actions
+13. package-controlled code or files are never processed before the decision
 
 An unrelated but cryptographically valid Sigstore identity can satisfy this
 validity-only verifier. Authorization conformance requires a future delegation
