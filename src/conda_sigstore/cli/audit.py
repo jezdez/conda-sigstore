@@ -34,7 +34,7 @@ def execute_audit(args: Namespace, *, console: Console | None = None) -> int:
         raise CondaSigstoreError(str(exc), code=exc.code) from None
     except (OSError, ValueError) as exc:
         raise CondaSigstoreError(str(exc)) from None
-    if args.json:
+    if args.json or args.console == "json":
         print(json.dumps(report, indent=2, sort_keys=True))
     else:
         if console is None:

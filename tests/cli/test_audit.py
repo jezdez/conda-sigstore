@@ -10,8 +10,9 @@ import conda_sigstore.cli.audit as cli_audit
 from conda_sigstore.exceptions import CondaSigstoreError
 
 
+@pytest.mark.parametrize("output_option", [("--json",), ("--console", "json")])
 def test_audit_uses_explicit_prefix_sidecars(
-    monkeypatch, tmp_path, capsys, sigstore_parser, rich_console
+    monkeypatch, tmp_path, capsys, sigstore_parser, rich_console, output_option
 ) -> None:
     target = tmp_path.resolve()
     captured = {}
@@ -40,7 +41,7 @@ def test_audit_uses_explicit_prefix_sidecars(
             str(tmp_path),
             "--sources",
             "--prefix-sidecars",
-            "--json",
+            *output_option,
         ]
     )
 

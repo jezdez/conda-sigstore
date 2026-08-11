@@ -16,8 +16,9 @@ from conda_sigstore.evidence import (
 from conda_sigstore.exceptions import CondaSigstoreError, TransportError
 
 
+@pytest.mark.parametrize("output_option", [("--json",), ("--console", "json")])
 def test_verify_json_passes_explicit_signer_requirement(
-    monkeypatch, tmp_path, capsys, sigstore_parser, rich_console
+    monkeypatch, tmp_path, capsys, sigstore_parser, rich_console, output_option
 ) -> None:
     artifact = tmp_path / "demo-1-0.conda"
     artifact.write_bytes(b"package")
@@ -87,7 +88,7 @@ def test_verify_json_passes_explicit_signer_requirement(
             "publisher@example.org",
             "--cert-oidc-issuer",
             "https://issuer.example",
-            "--json",
+            *output_option,
         ]
     )
 
