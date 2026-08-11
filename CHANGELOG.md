@@ -45,6 +45,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Changed
 
+- Reorganized the documentation around runnable beginner workflows and exact
+  operator and machine-readable reference contracts.
+- Made conda's standard `--console json` option select the same unstyled JSON
+  result output as `--json` for verification and audit commands.
 - Removed the permanently unavailable `source` field from SLSA evidence output.
 - Expanded the live Prefix interoperability check into a real strict
   pre-extraction installation followed by an environment audit.

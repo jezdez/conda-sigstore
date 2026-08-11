@@ -1,12 +1,23 @@
 # Verify with sigstore-python
 
-Use the standard `sigstore` command to check the same bundle independently of
-the conda-specific verifier. Start with a package and raw Bundle v0.3 object
-created by [Sign and verify a package](../tutorials/getting-started.md).
+Use the standard `sigstore` command to check a raw bundle independently of the
+conda-specific verifier.
+
+## Install the inspection tools
+
+The owning `conda-sigstore` environment already contains the `sigstore` CLI.
+The inspection command also needs `jq`, which you can install with your system
+package manager. Confirm that both commands are available:
+
+```console
+sigstore --version
+jq --version
+```
+
+Start with a package and raw Bundle v0.3 object created by
+[Sign a package](../tutorials/sign-package.md).
 
 ## Inspect the bundle
-
-Confirm the standard bundle media type and DSSE payload type:
 
 ```console
 jq -r '.mediaType, .dsseEnvelope.payloadType' \
@@ -20,24 +31,18 @@ application/vnd.dev.sigstore.bundle.v0.3+json
 application/vnd.in-toto+json
 ```
 
-## Supply an independent signer requirement
+## Supply the expected signer
 
-`sigstore verify identity` requires the expected certificate identity and OIDC
-issuer. Obtain both from the publisher's documented workflow or your own
-release configuration. Do not copy them from the bundle being checked.
+Obtain the certificate identity and issuer from the publisher's documented
+release workflow, not from the bundle being checked.
 
-For a public GitHub Actions release, the values have this form:
+::::{tab-set}
+:::{tab-item} Linux and macOS
 
 ```console
 export EXPECTED_CERTIFICATE_IDENTITY='https://github.com/OWNER/REPOSITORY/.github/workflows/release.yml@refs/tags/v1.0.0'
 export EXPECTED_OIDC_ISSUER='https://token.actions.githubusercontent.com'
-```
 
-## Verify the package
-
-Pass the bundle, expected signer, and exact package artifact:
-
-```console
 sigstore verify identity \
   --bundle ./demo-package-1.0-0.conda.sigstore.json \
   --cert-identity "$EXPECTED_CERTIFICATE_IDENTITY" \
@@ -45,25 +50,37 @@ sigstore verify identity \
   ./demo-package-1.0-0.conda
 ```
 
-The command verifies the Sigstore material, identity, issuer, and an in-toto
-subject digest matching the package. It prints the verified statement. It does
-not enforce CEP 27's exact filename, single subject, predicate type, or target
-channel rules.
+:::
+:::{tab-item} PowerShell
 
-Run the conda-specific verifier when those checks are required:
+```powershell
+$env:EXPECTED_CERTIFICATE_IDENTITY = 'https://github.com/OWNER/REPOSITORY/.github/workflows/release.yml@refs/tags/v1.0.0'
+$env:EXPECTED_OIDC_ISSUER = 'https://token.actions.githubusercontent.com'
 
-```console
-conda sigstore verify ./demo-package-1.0-0.conda \
-  --bundle ./demo-package-1.0-0.conda.sigstore.json \
-  --channel https://repo.example.invalid/test \
-  --cert-identity "$EXPECTED_CERTIFICATE_IDENTITY" \
-  --cert-oidc-issuer "$EXPECTED_OIDC_ISSUER"
+sigstore verify identity `
+  --bundle ./demo-package-1.0-0.conda.sigstore.json `
+  --cert-identity $env:EXPECTED_CERTIFICATE_IDENTITY `
+  --cert-oidc-issuer $env:EXPECTED_OIDC_ISSUER `
+  ./demo-package-1.0-0.conda
 ```
 
-## Repeat verification offline
+:::
+::::
 
-After an online operation has initialized the production trust material, use
-Sigstore's offline mode:
+A successful command prints the verified in-toto statement. It checks the
+Sigstore material, expected identity, issuer, and subject digest. It does not
+enforce CEP 27's exact filename, single-subject, predicate, or target-channel
+rules.
+
+Run `conda sigstore verify` as well when those checks are required.
+
+## Repeat the independent check offline
+
+After an online verification initializes Sigstore's production trust material,
+add `--offline`:
+
+::::{tab-set}
+:::{tab-item} Linux and macOS
 
 ```console
 sigstore verify identity --offline \
@@ -73,9 +90,18 @@ sigstore verify identity --offline \
   ./demo-package-1.0-0.conda
 ```
 
-Offline verification still fails when the local trust material is unavailable.
-It does not silently retrieve data or replace verification with a cached
-success result.
+:::
+:::{tab-item} PowerShell
 
-Continue with [Publish attestations to Prefix.dev](publish-prefix.md) to upload
-a CEP 27 bundle through current Prefix.dev tooling.
+```powershell
+sigstore verify identity --offline `
+  --bundle ./demo-package-1.0-0.conda.sigstore.json `
+  --cert-identity $env:EXPECTED_CERTIFICATE_IDENTITY `
+  --cert-oidc-issuer $env:EXPECTED_OIDC_ISSUER `
+  ./demo-package-1.0-0.conda
+```
+
+:::
+::::
+
+Missing local trust material causes the command to fail.

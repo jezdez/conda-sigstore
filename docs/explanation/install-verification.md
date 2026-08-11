@@ -6,7 +6,10 @@ attestation checks that an authenticated identity signed a statement about
 those bytes. Neither check alone establishes that the identity was authorized
 to publish a package.
 
-## Current client behavior
+## Client behavior observed on 2026-08-11
+
+This comparison reflects the linked public documentation on 2026-08-11. Pinned
+source links identify the exact Pixi and uv revisions reviewed.
 
 | Client | Artifact check during installation | Sigstore attestation check during installation |
 | --- | --- | --- |
@@ -81,51 +84,21 @@ matches pip's treatment of its
 which is not accepted as install input. The plugin therefore verifies evidence
 fresh instead of caching receipts.
 
-## What the opt-in install verifier checks
+## Why verification runs before extraction
 
-An installation decision has two independent parts:
+An audit can measure evidence coverage after installation, but it cannot prove
+that invalid evidence was rejected before package files reached a prefix. The
+package-verifier hook puts an opt-in decision at that earlier boundary while
+conda still has the selected URL, expected digest, and archive.
 
-1. Evidence validity asks whether a bundle is cryptographically valid and
-   binds a strict CEP 27 statement to the exact package filename, SHA-256, and
-   supplied target channel.
-2. Publisher authorization asks whether that authenticated signer was allowed
-   to publish this package to this channel and what the absence of evidence
-   means.
+The verifier uses the same evidence-validation pipeline as the explicit command
+instead of caching a receipt or reimplementing Sigstore inside conda. Exact
+transport behavior belongs in [Commands](../reference/commands.md), and the
+setting and recovery controls belong in
+[Configuration](../reference/configuration.md) and
+[Configure verification](../how-to/configure-verification.md).
 
-`conda-sigstore` implements the first part for explicit verification and its
-opt-in install verifier. It does not invent the second part. CEP 27 defines the
-signed publication statement, but no accepted conda standard currently
-distributes channel publisher delegation to clients.
-
-When the selected `PackageRecord` carries a repodata `attestations` descriptor,
-the verifier fetches `<artifact>.sigs` and validates the advertised size and
-SHA-256 before parsing. Without a descriptor, strict mode derives and requires
-the adjacent `<artifact>.v0.sigs` sidecar. A present descriptor is authoritative
-and any descriptor, retrieval, or integrity error fails without falling back.
-
-Both paths verify the Sigstore material and require at least one strict CEP 27
-statement for the exact artifact filename and SHA-256. An included
-target-channel claim must match the selected channel.
-
-Missing, unavailable, malformed, invalid, or nonmatching evidence fails closed.
-A local-file `MatchSpec` also fails because it has no authenticated HTTP channel
-from which to retrieve adjacent evidence.
-
-Enable it with the flat setting or conda's standard environment override:
-
-```yaml
-plugins:
-  conda_sigstore_enforce: true
-```
-
-```console
-CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true conda install PACKAGE
-```
-
-The setting defaults to false. The plugin registers the package-verifier hook
-directly, without an optional compatibility declaration.
-
-## Current upstream state
+## Upstream status
 
 [conda/conda#16518](https://github.com/conda/conda/pull/16518) provides the
 pre-extraction verifier boundary. This repository's locked developer
@@ -133,12 +106,9 @@ environments use `jezdez/conda` branch `feature/package-verifiers`. No released
 conda version provides that API yet.
 
 No separate `PackageRecord.attestations` preservation change is required for
-the adjacent path. The hook boundary rejects an archive before its extraction
-and before prefix unlink or link actions. Other package archives can already
-have completed cache extraction because those operations run concurrently.
-
-Rejecting a cryptographically valid signer as unauthorized still requires a
-standardized channel delegation that identifies authorized publishers.
+the adjacent path. A rejection prevents that archive from being extracted and
+linked, although concurrent cache work for other packages may already have
+completed.
 
 The exact upstream contract is listed in
 [Upstream integration contracts](../reference/upstream-contracts.md).

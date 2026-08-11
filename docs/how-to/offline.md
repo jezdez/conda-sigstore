@@ -1,69 +1,180 @@
-# Verify offline
+# Verify and install packages offline
 
-Sigstore bundles contain the signing certificate and transparency-log evidence,
-so cryptographic verification can run without contacting Fulcio or Rekor.
-Offline verification still needs the exact artifact, bundle or cached sidecar,
-and trusted Sigstore material.
+Offline verification needs the package, its bundle or cached sidecar, and
+Sigstore trust material. Prepare all three while connected.
 
-## Prepare while online
+## Prepare local files while online
 
-Before disconnecting:
+Download the public example and its sidecar:
 
-1. Retain each package artifact and its SHA-256.
-2. Run strict verification online once so an adjacent sidecar can be cached, or
-   retain repodata and each descriptor-advertised `.sigs` file.
-3. Provision a trusted Sigstore client configuration through an authenticated
-   process if production TUF material will not already be cached.
-4. Verify representative artifacts with the same files and trust material that
-   will be available offline.
-
-With `trust_config: null`, the verifier uses Sigstore's production trust
-configuration. Do not assume it can bootstrap for the first time without
-network access. A local `trust_config` is more explicit, but parsing that file
-does not prove authenticated distribution, freshness, or rollback protection.
-
-## Understand the sidecar cache
-
-A cached repodata sidecar is addressed and rechecked by SHA-256. A successfully
-verified adjacent sidecar is stored by content digest and referenced by the
-artifact SHA-256, credential-free channel, and filename. Both are
-cryptographically reverified when reused. Neither cache path substitutes for
-retained artifact bytes or a current verification decision. An extracted-only
-package cache entry remains `record-digest-only`.
-Online adjacent verification fetches the current sidecar instead of preferring
-the offline cache.
-
-`conda sigstore verify --bundle PATH` verifies the supplied file directly. It
-does not copy that file into the digest cache. Descriptor-selected sidecars are
-cached after their advertised digest is checked. Adjacent sidecars receive an
-artifact reference only after successful Sigstore and CEP 27 verification.
-
-## Verify local inputs
-
-Pass a local bundle or sidecar path:
+::::{tab-set}
+:::{tab-item} Linux and macOS
 
 ```console
-conda sigstore verify /mirror/linux-64/example-1.0-0.conda \
-  --bundle /mirror/linux-64/example-1.0-0.conda.sigs \
-  --channel https://conda.example.org/engineering
+curl --fail --location --remote-name \
+  https://prefix.dev/sigstore-example/linux-64/signed-package-2.1.0-hb0f4dca_0.conda
+curl --fail --location --remote-name \
+  https://prefix.dev/sigstore-example/linux-64/signed-package-2.1.0-hb0f4dca_0.conda.v0.sigs
 ```
 
-Audit an installed environment with the same local trust configuration:
+:::
+:::{tab-item} PowerShell
+
+```powershell
+Invoke-WebRequest `
+  -Uri https://prefix.dev/sigstore-example/linux-64/signed-package-2.1.0-hb0f4dca_0.conda `
+  -OutFile signed-package-2.1.0-hb0f4dca_0.conda
+Invoke-WebRequest `
+  -Uri https://prefix.dev/sigstore-example/linux-64/signed-package-2.1.0-hb0f4dca_0.conda.v0.sigs `
+  -OutFile signed-package-2.1.0-hb0f4dca_0.conda.v0.sigs
+```
+
+:::
+::::
+
+Verify the local files once while online. This also initializes Sigstore's
+production trust material for the owning conda runtime.
 
 ```console
-conda sigstore audit -p /srv/conda/envs/runtime --json
+conda sigstore verify signed-package-2.1.0-hb0f4dca_0.conda \
+  --bundle signed-package-2.1.0-hb0f4dca_0.conda.v0.sigs \
+  --channel https://prefix.dev/sigstore-example
 ```
 
-`--sources` inspects separate build or source evidence when retained package
-archives contain it. That evidence does not authorize the package publisher.
+Do not disconnect until the command reports `verified`.
 
-Strict installation can reuse a cached adjacent `.v0.sigs` sidecar offline by
-artifact SHA-256, channel, and filename. Missing cache data still fails closed
-and offline mode never attempts a network request.
+## Repeat the verification offline
 
-## Plan trust-root updates
+Disable network access, then enable conda's offline mode explicitly:
 
-Offline operation trades freshness for availability. Define how operators
-receive authenticated Sigstore trust-root updates, verifier updates, and
-incident notices. Test both rotation and rollback recovery before relying on
-offline verification.
+::::{tab-set}
+:::{tab-item} Linux and macOS
+
+```console
+CONDA_OFFLINE=true conda sigstore verify \
+  signed-package-2.1.0-hb0f4dca_0.conda \
+  --bundle signed-package-2.1.0-hb0f4dca_0.conda.v0.sigs \
+  --channel https://prefix.dev/sigstore-example
+```
+
+:::
+:::{tab-item} PowerShell
+
+```powershell
+$env:CONDA_OFFLINE = 'true'
+conda sigstore verify signed-package-2.1.0-hb0f4dca_0.conda `
+  --bundle signed-package-2.1.0-hb0f4dca_0.conda.v0.sigs `
+  --channel https://prefix.dev/sigstore-example
+Remove-Item Env:CONDA_OFFLINE
+```
+
+:::
+::::
+
+The command should again report `verified`. Because both inputs are local and
+conda is offline, the plugin does not fetch a sidecar or update trust material.
+
+## Use operator-managed trust material
+
+Set `trust_config` to a complete Sigstore client trust configuration when your
+operator provisions trust material independently:
+
+```yaml
+plugins:
+  conda_sigstore:
+    max_sidecar_bytes: 10485760
+    trust_config: /etc/conda/sigstore/client-trust-config.json
+```
+
+The file must contain both the trusted root and service configuration expected
+by sigstore-python. A standalone trusted-root document is not sufficient.
+Parsing the file does not prove that it was distributed authentically or is
+current.
+
+## Prepare strict installation separately
+
+Direct `verify --bundle PATH` does not populate the adjacent-sidecar cache.
+Warm the package, repodata, trust-material, and adjacent-sidecar caches with an
+online strict install:
+
+::::{tab-set}
+:::{tab-item} Linux and macOS
+
+```console
+CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true conda create \
+  --name sigstore-online \
+  --yes \
+  --override-channels \
+  --channel https://prefix.dev/sigstore-example \
+  --subdir linux-64 \
+  --solver classic \
+  --no-deps \
+  signed-package=2.1.0=hb0f4dca_0
+```
+
+:::
+:::{tab-item} PowerShell
+
+```powershell
+$env:CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE = 'true'
+conda create `
+  --name sigstore-online `
+  --yes `
+  --override-channels `
+  --channel https://prefix.dev/sigstore-example `
+  --subdir linux-64 `
+  --solver classic `
+  --no-deps `
+  signed-package=2.1.0=hb0f4dca_0
+Remove-Item Env:CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE
+```
+
+:::
+::::
+
+After disconnecting, create a second prefix from the prepared caches:
+
+::::{tab-set}
+:::{tab-item} Linux and macOS
+
+```console
+CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true conda create \
+  --name sigstore-offline \
+  --yes \
+  --offline \
+  --override-channels \
+  --channel https://prefix.dev/sigstore-example \
+  --subdir linux-64 \
+  --solver classic \
+  --no-deps \
+  signed-package=2.1.0=hb0f4dca_0
+```
+
+:::
+:::{tab-item} PowerShell
+
+```powershell
+$env:CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE = 'true'
+conda create `
+  --name sigstore-offline `
+  --yes `
+  --offline `
+  --override-channels `
+  --channel https://prefix.dev/sigstore-example `
+  --subdir linux-64 `
+  --solver classic `
+  --no-deps `
+  signed-package=2.1.0=hb0f4dca_0
+Remove-Item Env:CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE
+```
+
+:::
+::::
+
+The second command must not contact the channel. If any offline verification
+reports `offline-cache-miss` or unavailable trust material, reconnect and
+repeat the online preparation with the same conda runtime. Do not treat an
+earlier successful result as a verification receipt.
+
+Plan authenticated trust-config updates and test both rotation and rollback
+recovery before relying on offline verification in production.

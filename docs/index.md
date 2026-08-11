@@ -1,35 +1,21 @@
 # conda-sigstore
 
-`conda-sigstore` creates and verifies Sigstore publication attestations for
-conda packages without replacing conda's existing package hashes.
-
-It has four jobs:
-
-1. A publisher creates a strict CEP 27 statement for one package and signs it
-   with a short-lived Sigstore certificate.
-2. A consumer verifies the package, signed statement, certificate, and
-   transparency-log evidence, then receives the authenticated signer details.
-3. An operator audits an installed environment for available publication,
-   provenance, and embedded source evidence.
-4. An operator may opt in to a draft pre-extraction verifier that requires
-   valid CEP 27 evidence from a descriptor-pinned or deterministic adjacent
-   sidecar.
-
-The plugin supports two sidecar transports:
-
-| Transport | Discovery | Integrity binding | Status |
-| --- | --- | --- | --- |
-| `repodata` | `attestations` descriptor in `repodata.json` | SHA-256 and exact sidecar size | Draft proposal |
-| Prefix.dev | `<artifact>.v0.sigs` by convention | None in `repodata.json` | Current service-specific compatibility |
+`conda-sigstore` creates and verifies Sigstore attestations for conda packages.
+Use it to verify a downloaded package, sign a package for publication, audit an
+installed environment, or require valid evidence before conda extracts a
+package.
 
 :::{warning}
-The repodata-advertised `.sigs` transport remains a draft proposal in
-[conda/ceps#142](https://github.com/conda/ceps/pull/142) and may change
-incompatibly.
+This is alpha software with no published release. Install verification requires
+the unreleased conda API in
+[conda/conda#16518](https://github.com/conda/conda/pull/16518). The draft
+repodata and source-attestation formats may change incompatibly.
 :::
 
-New users should [install the plugin](how-to/install.md), run
-`conda sigstore --help`, then follow the signing and verification tutorial.
+Check the [installation status](how-to/install.md), then follow the
+public-package verification tutorial after a supported installation is
+available. Source contributors can run the same commands from the repository
+environment.
 
 ## Choose a documentation path
 
@@ -40,11 +26,11 @@ New users should [install the plugin](how-to/install.md), run
 :link: tutorials/getting-started
 :link-type: doc
 
-Create, inspect, and verify package publication attestations.
+Verify a real public package and inspect its signer evidence.
 :::
 
 :::{grid-item-card} {octicon}`tools` How-to guides
-:link: how-to/configure-verification
+:link: how-to/install
 :link-type: doc
 
 Install the plugin, audit environments, configure inputs, and work offline.
@@ -66,47 +52,20 @@ Understand the design and security boundaries.
 
 ::::
 
-## What verification proves
+## What a verified result means
 
-A successful CEP 27 verification establishes that:
-
-- the package has the reported SHA-256 digest
-- a Sigstore Bundle v0.3 is valid against the selected trust root
-- certificate and transparency-log evidence verify
-- the signed statement names the exact package filename and digest
-- an included target-channel claim matches the supplied channel
-- the result accurately reports the certificate identity and OIDC issuer
-
-It does not establish that the signer was authorized to publish to the channel,
-that the package was built safely, that its source was reviewed, or that its
-contents are benign.
-
-## Authorization and installation
-
-CEP 27 requires trust in a signer but does not standardize how channels delegate
-publisher identities. The draft sidecar proposal distributes bundles but does
-not identify which admitted bundle represents an authorized publisher.
-
-`conda-sigstore` reports signer evidence and can apply an exact signer
-requirement to one explicit verification. It does not discover channel
-publisher delegation.
-
-The plugin registers a direct package-verifier hook against the unreleased API
-in conda/conda#16518. It is disabled by default. When enabled, it uses a
-descriptor-pinned `.sigs` sidecar when advertised and otherwise requires the
-deterministic adjacent `.v0.sigs` sidecar. It fails closed before extraction
-and does not authorize the signer.
-
-The install path needs only the package URL and SHA-256 supplied by the draft
-hook, not a new `PackageRecord` field. See
-[Installation verification across package managers](explanation/install-verification.md)
-and [Upstream integration contracts](reference/upstream-contracts.md).
+A verified result binds the package filename and SHA-256 to a valid Sigstore
+bundle and reports the authenticated certificate identity and issuer. It does
+not establish that the signer was authorized to publish to a channel or that
+the package is safe. Read the [security model](explanation/security-model.md)
+for the complete boundary.
 
 ```{toctree}
 :hidden:
 :caption: Tutorial
 
 tutorials/getting-started
+tutorials/sign-package
 ```
 
 ```{toctree}
@@ -130,6 +89,7 @@ how-to/offline
 reference/commands
 reference/configuration
 reference/json-output
+reference/source-attestations
 reference/standards
 reference/upstream-contracts
 ```

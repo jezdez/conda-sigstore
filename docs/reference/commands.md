@@ -1,11 +1,11 @@
 # Commands
 
-The plugin registers one `conda sigstore` subcommand. Commands use conda's
-active operational settings and plugin discovery.
+The plugin registers one `conda sigstore` subcommand. It uses the active conda
+configuration and target prefix.
 
-Human output uses terminal styling when supported and remains readable without
-color. Status words carry the meaning independently of color. `--json` writes
-one unstyled JSON object without human status lines or ANSI escapes.
+Human output uses terminal styling when supported. `--json` writes one
+unstyled JSON value without human status lines or ANSI escapes. See
+[JSON output and exit status](json-output.md) for the machine contract.
 
 ## `conda sigstore attest`
 
@@ -13,17 +13,23 @@ one unstyled JSON object without human status lines or ANSI escapes.
 conda sigstore attest PACKAGE --target-channel URL [--output PATH]
 ```
 
-Create a strict CEP 27 publication statement for `PACKAGE`, obtain a Sigstore
-keyless signing identity, and write one Sigstore Bundle v0.3 JSON object. The
-default output path is `<PACKAGE>.sigstore.json`.
+Create and keylessly sign one strict CEP 27 publication statement for
+`PACKAGE`. The command writes one Sigstore Bundle v0.3 JSON object. It does not
+upload the package or assemble a channel sidecar.
 
-`--target-channel` records the intended publication channel. The command does
-not upload the package or assemble a channel sidecar. Channel tooling wraps one
-or more complete bundle objects in the JSON array served as `<PACKAGE>.sigs`.
+| Argument | Required | Meaning |
+| --- | --- | --- |
+| `PACKAGE` | yes | Local `.conda` or `.tar.bz2` package archive |
+| `--target-channel URL` | yes | Credential-free HTTP or HTTPS channel recorded as `targetChannel` |
+| `--output PATH` | no | Bundle output path, defaulting to `<PACKAGE>.sigstore.json` |
 
-The command refuses to replace the input package or an existing output file. It
-rehashes the package before committing the output so a package changed during
-the OIDC and signing flow cannot produce a successful command.
+The command refuses to replace the input package or an existing output file.
+It rehashes the package before committing the output so a package changed
+during the OIDC and signing flow cannot produce a successful command.
+
+The output is a single bundle object. Channel tooling wraps one or more
+complete bundle objects in the JSON array served as `<PACKAGE>.sigs` or, for
+the current Prefix.dev compatibility transport, `<PACKAGE>.v0.sigs`.
 
 ## `conda sigstore verify`
 
@@ -32,73 +38,107 @@ conda sigstore verify ARTIFACT --bundle PATH_OR_URL [--channel URL] \
   [--cert-identity IDENTITY --cert-oidc-issuer URL] [--json]
 ```
 
-Verify an artifact against a local or remote Bundle v0.3 object or nonempty
-bundle array. Verification covers:
+Verify a local package archive against a local or remote Bundle v0.3 object or
+nonempty bundle array.
 
-- artifact SHA-256 and exact filename
-- bundle structure and DSSE signature
-- Fulcio certificate chain and OIDC issuer evidence
-- Rekor and supported timestamp evidence
-- strict CEP 27 statement structure
+| Argument | Required | Meaning |
+| --- | --- | --- |
+| `ARTIFACT` | yes | Local package archive whose filename and SHA-256 must match the statement |
+| `--bundle PATH_OR_URL` | yes | Local file or HTTP or HTTPS URL containing one bundle object or a nonempty bundle array |
+| `--channel URL` | no | Expected channel for an included `targetChannel` claim |
+| `--cert-identity IDENTITY` | paired | Exact certificate Subject Alternative Name required for this invocation |
+| `--cert-oidc-issuer URL` | paired | Exact certificate OIDC issuer required for this invocation |
+| `--json` | no | Write the version 1 verification result as JSON |
+| `--console {classic,json}` | no | Select human output or structured plugin result output |
+| `-v`, `--verbose` | no | Increase conda logging verbosity, repeatable up to trace output |
+| `-q`, `--quiet` | no | Disable conda progress output |
+
+`--cert-identity` and `--cert-oidc-issuer` must be supplied together. Their
+values must come from an independent publisher or release configuration, not
+from the bundle being checked. They apply only to this command and are not
+stored as channel policy.
+
+`--json` and `--console json` select the same `conda-sigstore` result after
+verification runs. Only `--json` also selects conda's JSON error reporter for
+argument, input, and configuration failures. `--verbose` controls conda
+logging. `--quiet` controls conda progress output, although this command does
+not create a progress bar.
+
+Verification checks:
+
+- the SHA-256 and exact filename of the artifact
+- the bundle structure and DSSE signature
+- the Fulcio certificate chain and OIDC issuer evidence
+- Rekor inclusion and checkpoint material
+- supported signed timestamp material
+- the strict CEP 27 statement structure
 - an included target-channel claim
+- the exact signer pair when both signer options are supplied
 
-When `--channel` is supplied, an included `targetChannel` must match it. Without
-`--channel`, the claim is validated and reported but is not compared with an
-expected channel.
+When `--channel` is supplied, an included `targetChannel` must match it.
+Without `--channel`, the claim is validated and reported but is not compared
+with an expected channel.
 
 The result reports the authenticated certificate identity and issuer. It does
-not call the signer authorized for the channel. `--json` emits the versioned
-result described in [JSON output and exit status](json-output.md).
-
-Pass `--cert-identity` and `--cert-oidc-issuer` together to require one exact
-certificate SAN and literal OIDC issuer for this verification. These option
-names match `sigstore verify identity`. The values must come from an independent
-publisher or release configuration, not from the bundle being verified. A
-cryptographically valid bundle from another signer remains visible as evidence
-but produces the top-level `untrusted-identity` status when no matching CEP 27
-publication statement exists. The requirement is not stored as channel policy.
-JSON records the two supplied values under `expected_signer` and reports
-authorization as `verified` or `failed`.
+not claim that the channel authorized that signer.
 
 ## `conda sigstore audit`
 
 ```console
-conda sigstore audit [-n ENV | -p PREFIX] [--sources] [--prefix-sidecars] [--json]
+conda sigstore audit [-n ENVIRONMENT | -p PREFIX] [--sources] \
+  [--prefix-sidecars] [--json]
 ```
 
-Audit package records in an existing conda environment. `-n` selects an
-environment by name and `-p` selects a prefix. They are mutually exclusive.
+Audit package records in an existing conda environment. If neither target
+option is supplied, conda's active target prefix is used.
+
+| Argument | Required | Meaning |
+| --- | --- | --- |
+| `-n ENVIRONMENT`, `--name ENVIRONMENT` | no | Named conda environment to audit |
+| `-p PREFIX`, `--prefix PREFIX` | no | Environment prefix to audit |
+| `--sources` | no | Audit draft embedded source-attestation evidence after package publication verification succeeds |
+| `--prefix-sidecars` | no | Use Prefix.dev's current adjacent `.v0.sigs` convention instead of repodata discovery |
+| `--json` | no | Write the version 1 audit report as JSON |
+| `--console {classic,json}` | no | Select human output or structured plugin result output |
+| `-v`, `--verbose` | no | Increase conda logging verbosity, repeatable up to trace output |
+| `-q`, `--quiet` | no | Disable conda progress output |
+
+`--name` and `--prefix` are mutually exclusive. `--json` and `--console json`
+select the same audit report after auditing runs. Only `--json` also selects
+conda's JSON error reporter for command setup failures. `--verbose` controls
+conda logging. `--quiet` controls conda progress output, although this command
+does not create a progress bar.
 
 By default, audit reads only repodata-advertised `.sigs` sidecars. The package
-record must contain an `attestations` descriptor with the exact sidecar SHA-256
-and size. Missing descriptors are not probed.
+record must preserve an `attestations` descriptor with the exact sidecar
+SHA-256 and size. Missing descriptors are not probed. Released conda versions
+do not preserve that proposed field through every solver, cache, and prefix
+record path, so an audit can report `missing` even when a channel serves a
+sidecar.
 
-Released conda versions do not preserve that unknown repodata field through
-solver, cache, and prefix records. Default audits therefore report `missing`
-when a retained archive has no preserved descriptor.
+`--prefix-sidecars` explicitly selects Prefix.dev's current, repodata-unpinned
+`.v0.sigs` convention. It never runs as an automatic audit fallback.
 
-`--prefix-sidecars` explicitly selects Prefix.dev's current, unpinned
-`.v0.sigs` naming convention. It never runs as an automatic fallback.
+`--sources` reads draft source-attestation declarations and embedded bundles
+from a retained package archive. See
+[Source-attestation audit format](source-attestations.md) for the exact input
+contract. SLSA and source evidence are report-only. The audit does not assign a
+SLSA level or authorize a package publisher.
 
-`--sources` inspects draft source-attestation evidence in a retained package
-archive. SLSA and source evidence are report-only and do not assign a SLSA level
-or authorize the package publisher.
-
-An audit describes currently available evidence. It does not prove that the
-package was verified before extraction or installation. See
-[Audit an installed environment](../how-to/audit-environment.md) for the full
-workflow and [JSON output and exit status](json-output.md) for status meanings.
+An audit describes evidence currently available to the client. It does not
+prove that a package was verified before extraction or installation.
 
 ## Opt-in package verification
 
-The plugin registers a direct package-verifier hook against the unreleased conda
-API in conda/conda#16518. It yields no verifier unless
-`plugins.conda_sigstore_enforce` is true. The standard environment override is
-`CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true`.
+The plugin registers a direct package-verifier hook against the unreleased
+conda API in [conda/conda#16518](https://github.com/conda/conda/pull/16518).
+It yields no verifier unless `plugins.conda_sigstore_enforce` is true. The
+standard environment override is:
 
-Enabled verification uses descriptor-pinned `.sigs` evidence when advertised
-and otherwise requires the deterministic adjacent `.v0.sigs` sidecar. Missing,
-unavailable, malformed, invalid, or nonmatching evidence fails closed. A
-present but broken descriptor never falls back. The verifier establishes
-evidence validity but does not authorize the signer. See
-[Upstream integration contracts](upstream-contracts.md).
+```console
+CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true conda install PACKAGE
+```
+
+Enabled verification rejects a package unless its selected evidence verifies.
+See [Upstream integration contracts](upstream-contracts.md) for the hook and
+evidence-selection rules.

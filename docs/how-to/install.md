@@ -1,45 +1,58 @@
 # Install conda-sigstore
 
-The plugin must run in conda's base Python environment. Installing it in a
-separate named environment does not register `conda sigstore` with the `conda`
-executable from base.
+`conda-sigstore` must be installed in the Python environment that owns the
+`conda` executable. That environment is usually conda's base environment. A
+plugin installed in an unrelated named environment is not discovered by that
+`conda` executable.
 
 :::{warning}
-This preview requires the unreleased package-verifier API from
-[conda/conda#16518](https://github.com/conda/conda/pull/16518). No released
-conda version provides it yet.
+There is no supported end-user installation yet. `conda-sigstore` has no PyPI
+or conda release, and its install verifier requires the unreleased API in
+[conda/conda#16518](https://github.com/conda/conda/pull/16518). Do not overlay
+the draft conda branch onto a working base installation.
 :::
 
-## Install a release
+## Run the source preview
 
-Install pip and the plugin into conda's base environment:
+Use the repository's locked test environment to evaluate the current source
+without changing your normal conda installation. You need
+[Pixi](https://pixi.sh) and Git.
 
 ```console
-conda install -n base pip
-conda run -n base python -m pip install conda-sigstore
+git clone https://github.com/jezdez/conda-sigstore.git
+cd conda-sigstore
+pixi install --locked --all
+pixi shell -e test
+conda init --install
 conda sigstore --help
 ```
 
-If `conda-pypi` is already installed with conda, use its target-environment
-option before the install subcommand:
+`conda init --install` is a one-time setup for the source environment. It
+replaces the pip bootstrap entry point inside `.pixi/envs/test` with conda's
+normal command wrappers. It does not initialize your shell profile.
+
+The help output should list `attest`, `verify`, and `audit`. The locked
+environment uses `jezdez/conda` branch `feature/package-verifiers`, the branch
+behind the draft hook pull request.
+
+Exit the preview shell when finished:
 
 ```console
-conda pypi -n base install conda-sigstore
-conda sigstore --help
+exit
 ```
 
-## Check plugin discovery
+## Wait for a supported installation
 
-Ask conda to load the installed plugin:
+A normal installation will be documented after both of these are available:
 
-```console
-conda sigstore --help
-```
+1. a released conda version that provides the package-verifier hook
+2. a published `conda-sigstore` distribution
 
-The help output lists `attest`, `verify`, and `audit`. The package-verifier hook
-is registered directly, but enforcement defaults to false and therefore yields
-no verifier during ordinary package operations.
+At that point, install the plugin into the owning conda environment and confirm
+discovery with `conda sigstore --help`. Until then, commands that install
+`conda-sigstore` from PyPI are not valid.
 
-Continue with [Sign and verify a package](../tutorials/getting-started.md), or
-read [Configure verification](configure-verification.md) before enabling the
-integration preview.
+The verifier is disabled by default even when the plugin is installed. Start
+with [Verify a public package](../tutorials/getting-started.md). Read
+[Configure verification](configure-verification.md) before enabling install
+enforcement.

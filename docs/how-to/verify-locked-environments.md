@@ -1,17 +1,41 @@
 # Verify locked environments during installation
 
-`conda-sigstore` composes with `conda-lockfiles` and `conda-workspaces` through
-conda's package-verifier hook. Install the plugins in the Python environment of
-the conda executable that will run the command. Installing `conda-sigstore` in
-one named environment does not enable it for a different conda installation.
+Install `conda-sigstore`, `conda-lockfiles`, and `conda-workspaces` in the
+Python environment that owns the `conda` command. The source-preview test
+environment already includes all three.
 
-Follow [Install conda-sigstore](install.md) for that conda installation.
+For a future supported installation, install the companion plugins from
+conda-forge into the owning conda prefix:
+
+::::{tab-set}
+:::{tab-item} Linux and macOS
+
+```console
+conda install --prefix "$(conda info --base)" --channel conda-forge \
+  "conda-lockfiles>=0.2.1" "conda-workspaces>=0.8"
+```
+
+:::
+:::{tab-item} PowerShell
+
+```powershell
+conda install --prefix (conda info --base) --channel conda-forge `
+  'conda-lockfiles>=0.2.1' 'conda-workspaces>=0.8'
+```
+
+:::
+::::
+
+Confirm that conda discovers their commands:
+
+```console
+conda create --help
+conda workspace --help
+```
 
 ## Install from a lockfile
 
-Enable verification for one `conda create` invocation. `conda-lockfiles`
-converts the selected lockfile records into conda package operations, so no
-separate conda-sigstore lockfile integration is required.
+Enable verification for one `conda create` invocation.
 
 ::::{tab-set}
 :::{tab-item} pixi.lock
@@ -32,38 +56,57 @@ CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true \
 :::
 ::::
 
-Every conda package archive extracted by that command must have one valid,
-exact artifact-bound CEP 27 statement. Missing or invalid evidence fails the
-installation.
+On PowerShell, set and remove the environment variable around the same command:
+
+```powershell
+$env:CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE = 'true'
+conda create --name example --file pixi.lock --format rattler-lock-v6
+Remove-Item Env:CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE
+```
+
+Every package archive extracted by the command must have one valid CEP 27
+statement that binds its exact filename and SHA-256. Missing or invalid evidence
+fails the installation.
 
 ## Install a workspace
 
 Run the locked install from the workspace root:
+
+::::{tab-set}
+:::{tab-item} Linux and macOS
 
 ```console
 CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true \
   conda workspace install --locked
 ```
 
-`conda-workspaces` uses conda transactions for solved packages and
-`conda-lockfiles` models when reading `conda.lock`. Both paths reach the same
-pre-extraction verifier. The workspace manifest still defines intent and the
-lockfile still defines the selected package set.
+:::
+:::{tab-item} PowerShell
 
-## Boundaries
+```powershell
+$env:CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE = 'true'
+conda workspace install --locked
+Remove-Item Env:CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE
+```
 
-- Keep SHA-256 lockfile entries. Lock hashes select exact bytes, while Sigstore
-  verifies signed evidence for those bytes. Neither check authenticates the
-  lockfile or establishes that a channel authorized the signer. See
-  [Installation verification](../explanation/install-verification.md).
-- The supported lockfile formats do not retain the optional repodata
-  `attestations` descriptor. Strict locked installs therefore require the
-  adjacent `<artifact>.v0.sigs` sidecar when the descriptor is absent.
-- Workspace archives do not bundle sidecars or Sigstore trust material. Before
-  an offline locked install, run an online strict install to populate the
-  adjacent-sidecar cache and provision the required trust material. See
-  [Verify offline](offline.md).
-- The hook covers conda package archives that the command extracts. External
-  pip installs are outside it, local artifacts fail closed, and unchanged
-  prefixes are not reverified. Use [Audit an environment](audit-environment.md)
-  for an existing prefix.
+:::
+::::
+
+The workspace command routes conda package extraction through the same verifier
+hook. The manifest still defines intent and the lockfile still defines the
+selected package set.
+
+## Know what remains outside the hook
+
+- Keep lockfile SHA-256 entries. They select exact bytes while Sigstore verifies
+  signed evidence for those bytes.
+- Locked records that do not retain a repodata descriptor require adjacent
+  `<artifact>.v0.sigs` evidence.
+- Pip packages and unchanged prefix contents are not newly verified by this
+  hook. With enforcement enabled, conda does not reuse an extracted-only cache
+  entry. It finds or redownloads the archive and verifies it before extraction,
+  or fails offline.
+- Offline installation also needs prepared package, repodata, sidecar, and
+  trust-material caches. See [Verify offline](offline.md).
+
+Use [Audit an environment](audit-environment.md) to inspect an existing prefix.

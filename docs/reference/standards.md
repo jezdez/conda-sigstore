@@ -1,14 +1,28 @@
 # Standards and formats
 
-`conda-sigstore` separates an accepted statement format from draft channel
-transport, source-evidence, and publisher-delegation work.
+`conda-sigstore` implements one accepted conda statement format alongside
+draft and service-specific transport and source-evidence formats.
 
-## Accepted CEP 27 statement
+| Contract | Status | Use in this plugin |
+| --- | --- | --- |
+| [CEP 27](https://github.com/conda/ceps/blob/main/cep-0027.md) publication statement | Accepted CEP | Required package statement |
+| [Sigstore Bundle v0.3](https://github.com/sigstore/protobuf-specs/blob/main/protos/sigstore_bundle.proto) | Published Sigstore format | Signed evidence container |
+| [conda/ceps#142](https://github.com/conda/ceps/pull/142) served sidecars | Open proposal | Draft repodata transport |
+| Prefix.dev `.v0.sigs` | Current service-specific behavior | Compatibility transport |
+| [conda/ceps#168](https://github.com/conda/ceps/pull/168) source attestations | Open proposal | Audit-only embedded source evidence |
 
-[CEP 27](https://github.com/conda/ceps/blob/main/cep-0027.md) defines a
-publication attestation as an
-[in-toto Statement v1](https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md).
-The strict shape is:
+(cep-27-publication-statement)=
+## CEP 27 publication statement
+
+CEP 27 defines a publication attestation as an
+[in-toto Statement v1](https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md)
+with this predicate type:
+
+```text
+https://schemas.conda.org/attestations-publish-1.schema.json
+```
+
+A statement created by `conda sigstore attest` has this shape:
 
 ```json
 {
@@ -28,65 +42,60 @@ The strict shape is:
 }
 ```
 
-The statement has exactly one subject. Its name is the artifact filename and
-its digest is the SHA-256 of the exact artifact bytes. `targetChannel` is
-optional in CEP 27. When a caller supplies a channel, the plugin checks an
-included target-channel claim against it.
+The plugin requires exactly one subject. The subject name must be a bare
+`.conda` or `.tar.bz2` package filename containing name, version, and build
+components. Its digest mapping must contain only a SHA-256 of the exact package
+bytes.
 
-CEP 27 is a publication claim. It is not SLSA build provenance and must not be
-presented as proof of source, recipe, builder, or build process.
+CEP 27 permits an absent target channel. The plugin represents that as an
+omitted or null `predicate`. When `predicate` is an object, it must contain a
+valid credential-free HTTP or HTTPS `targetChannel` without a query, fragment,
+or trailing slash. `conda sigstore attest` always requires and records the
+target channel. Verification compares an included claim only when the caller
+supplies an expected channel.
+
+CEP 27 is a publication claim. It is not SLSA build provenance and does not
+prove source, recipe, builder, or build-process properties.
 
 ## Sigstore Bundle v0.3
 
-The CEP 27 statement is DSSE signed and stored in a
-[Sigstore Bundle v0.3](https://github.com/sigstore/protobuf-specs/blob/main/protos/sigstore_bundle.proto).
-The bundle carries the signing certificate and transparency-log verification
-material needed for offline verification against a trusted root.
+The CEP 27 statement is DSSE signed and stored in one Sigstore Bundle v0.3
+object. The bundle contains the signing certificate and transparency-log
+material. It may also contain supported signed timestamp material.
 
-`conda sigstore attest` outputs one bundle object as
-`<artifact>.sigstore.json`. A channel publisher wraps one or more complete
-bundle objects in the JSON array served as `<artifact>.sigs`. The array permits
-more than one signer or countersignature without changing the package artifact.
+`conda sigstore attest` writes one bundle object as
+`<artifact>.sigstore.json`. A channel sidecar is a nonempty JSON array of one
+or more complete bundle objects. Multiple entries are independent attestations
+or signatures. They are not described as countersignatures by this plugin.
+
+One cryptographically valid, artifact-bound CEP 27 entry is sufficient for a
+verified package result. Invalid, unsupported, or nonmatching siblings remain
+visible as failures but do not overturn a valid entry.
 
 ## Tool responsibilities
 
-| Tool | Standard behavior | Conda-specific limit |
+| Tool | Behavior | Conda-specific boundary |
 | --- | --- | --- |
-| `sigstore sign` | Creates a message signature over a blob | The result is not a CEP 27 publication statement |
-| `sigstore verify identity` | Verifies Sigstore material, an expected identity and issuer, and a matching in-toto subject digest | It does not enforce CEP 27's exact filename, single subject, predicate type, or target channel |
-| `conda sigstore attest` | Uses sigstore-python to DSSE-sign one strict CEP 27 statement | It creates evidence but does not upload it |
-| `conda sigstore verify` | Verifies Sigstore material, artifact binding, the full CEP 27 statement contract, and an optional exact signer requirement | It cannot discover a channel's publisher delegation |
-| opt-in conda package verifier | Requires valid CEP 27 evidence from a descriptor-pinned or deterministic adjacent sidecar before extraction | It validates evidence but does not authorize the signer |
-| Rattler-Build `--generate-attestation` | Creates one CEP 27 bundle per package and uploads it through Prefix Trusted Publishing | This is a Prefix-specific producer path |
-| `actions/attest` | Creates a custom Sigstore-backed in-toto attestation and stores it in GitHub | `subject-path` must resolve to one package for CEP 27 |
-| `gh attestation verify` | Retrieves GitHub-hosted evidence and applies GitHub owner and predicate criteria | It is not a replacement for CEP 27 target-channel validation |
+| `sigstore sign` | Creates a message signature over bytes | Does not create a CEP 27 statement |
+| `sigstore verify identity` | Verifies Sigstore material against an identity and issuer | Does not enforce the plugin's complete CEP 27 filename, predicate, and target-channel checks |
+| `conda sigstore attest` | Creates and signs one strict CEP 27 statement | Writes evidence but does not upload it |
+| `conda sigstore verify` | Verifies Sigstore material, CEP 27 artifact binding, optional target channel, and an optional exact signer pair | Does not discover channel publisher delegation |
+| opt-in package verifier | Requires valid CEP 27 evidence before extraction | Enforces evidence validity, not signer authorization |
+| Rattler-Build `--generate-attestation` | Creates CEP 27 bundles during Prefix.dev publication | Prefix.dev producer path |
+| `actions/attest` | Creates a Sigstore-backed in-toto attestation with a caller-supplied predicate | Workflow must create the exact CEP 27 subject and predicate expected here |
 
-See [Verify with sigstore-python](../how-to/verify-with-sigstore.md)
-and [Publish attestations to Prefix.dev](../how-to/publish-prefix.md) for complete
+See [Verify with sigstore-python](../how-to/verify-with-sigstore.md) and
+[Publish attestations to Prefix.dev](../how-to/publish-prefix.md) for operator
 workflows.
 
-## Draft served-attestation transport
+## Draft repodata sidecar transport
 
-[conda/ceps#142](https://github.com/conda/ceps/pull/142) proposes how channels
-serve attestation sidecars. The plugin calls this mechanism the `repodata`
-transport.
+[conda/ceps#142](https://github.com/conda/ceps/pull/142) is an open proposal
+for serving attestation sidecars. The plugin calls it the `repodata` transport.
 
-For an artifact named `example-1.0-0.conda`:
-
-- the sidecar is `example-1.0-0.conda.sigs`
-- the sidecar is a JSON array
-- the package's repodata record contains `attestations.sha256` and
-  `attestations.size`
-- absence of the descriptor means no repodata sidecar is advertised
-- clients do not probe for `.sigs`
-- clients check exact response size and SHA-256 before JSON parsing
-
-The draft makes the HTTP `Content-Type` advisory and says clients must not
-reject solely because of that header. Each array element is instead parsed by
-sigstore-python as a Sigstore bundle, including its bundle `mediaType`. A bad
-element remains a bundle-local failure and cannot hide a valid CEP 27 sibling.
-
-The descriptor object is:
+For `example-1.0-0.conda`, the proposed sidecar is
+`example-1.0-0.conda.sigs`. The package's repodata record advertises the exact
+sidecar SHA-256 and size:
 
 ```json
 {
@@ -97,44 +106,56 @@ The descriptor object is:
 }
 ```
 
-Because the proposal is open, the plugin may need an incompatible transport
-update before 1.0.
+The plugin applies these rules:
 
-## Prefix.dev `.v0.sigs` transport
+- `attestations` contains exactly `sha256` and `size`
+- `sha256` is 64 lowercase hexadecimal characters
+- `size` is a positive integer within the configured sidecar limit
+- the sidecar is a nonempty JSON array of bundle objects
+- absence of the descriptor means that no `.sigs` sidecar is advertised
+- the client never probes for an undeclared `.sigs` file
+- exact response size and SHA-256 are checked before JSON parsing
+- the HTTP `Content-Type` is advisory and does not decide bundle validity
 
-The Prefix.dev producer stack in Pixi, Rattler-Build, and `rattler_upload`
-publishes `<artifact>.v0.sigs`, also as a JSON array of Bundle v0.3 objects.
-Existing Prefix channels do not advertise the sidecar hash and size in
-repodata.
+A present descriptor is authoritative. Descriptor, retrieval, size, digest,
+container, or verification failure does not fall back to another transport.
 
-Explicit `.v0.sigs` input preserves interoperability while making the weaker
-discovery and integrity model visible. Strict install enforcement also requires
-this deterministic adjacent input when repodata has no descriptor. A present
-descriptor selects `.sigs` and any descriptor or retrieval failure remains
-fatal instead of falling back.
+The proposal remains open, so this transport may require an incompatible
+change before a stable release.
 
-The pinned public client paths are documented in
-[Publish attestations to Prefix.dev](../how-to/publish-prefix.md). They do not
-compare a supplied bundle's signer identity with the Prefix upload identity.
-Public information does not establish whether the server performs that
-comparison. The plugin reports the signer without claiming Prefix authorized
-it.
+## Prefix.dev compatibility transport
 
-## Source and build evidence
+The current Prefix.dev producer path used by Pixi, Rattler-Build, and
+`rattler_upload` publishes `<artifact>.v0.sigs` as a JSON array of Bundle v0.3
+objects. Existing Prefix.dev channels do not advertise the sidecar hash and
+size in repodata.
 
-[conda/ceps#168](https://github.com/conda/ceps/pull/168) proposes recipe source
-attestation validation. Rattler-Build has separate experimental source
-verification. Both are distinct from CEP 27 publication attestations.
+Explicit `.v0.sigs` input keeps the weaker discovery and integrity model
+visible in verification and audit commands. The opt-in install verifier also
+uses this deterministic adjacent name when the selected repodata record has no
+descriptor. It first binds the signed CEP 27 statement to the package SHA-256
+supplied by conda.
 
-The `audit --sources` view can summarize separate source or SLSA evidence when
-present. It does not reinterpret that evidence as CEP 27 and does not let it
-authorize a publication signer.
+Public client behavior does not establish whether the proprietary Prefix.dev
+server compares a bundle signer with the upload identity. The plugin reports
+the authenticated signer without claiming that Prefix.dev authorized it.
 
-Generic SLSA Provenance v1 does not designate the first
-`resolvedDependencies` entry as the source. The plugin reports all materials as
-stated without guessing which one represents the source.
+## Draft source-attestation evidence
 
-Converted PEP 740 or PyPI bundles without canonical Rekor entries are reported
-as invalid. The draft source index does not carry authenticated conversion
-provenance that can justify disabling Sigstore transparency-log checks, so the
-plugin does not apply that exception automatically.
+[conda/ceps#168](https://github.com/conda/ceps/pull/168) is an open proposal
+for declaring and preserving source attestations in recipes and built
+packages. It is separate from accepted CEP 27 publication statements.
+
+`conda sigstore audit --sources` implements an audit-only subset over retained
+package archives. The exact parser and bundle checks are documented in
+[Source-attestation audit format](source-attestations.md). Source evidence
+cannot authorize a CEP 27 publication signer.
+
+Generic SLSA Provenance v1 does not designate one resolved dependency as the
+source. The plugin reports all materials without guessing which one represents
+the source or assigning a SLSA level.
+
+Converted PEP 740 or PyPI bundles without canonical Rekor entries are rejected.
+The draft embedded index does not authenticate bundle-conversion provenance,
+so the plugin does not disable Sigstore transparency-log verification for
+those bundles.

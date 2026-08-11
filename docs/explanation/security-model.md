@@ -11,10 +11,9 @@ does not authorize the authenticated signer.
 ## Protected assets
 
 - package bytes supplied for verification
-- fetched and cached sidecar bytes
+- fetched or cached sidecar bytes
 - target-channel claims in CEP 27 statements
 - Sigstore trust material
-- cached sidecars
 - retained package archives inspected for source evidence
 
 ## Trust anchors
@@ -23,8 +22,7 @@ Cryptographic verification depends on:
 
 - the selected Sigstore production or local trust configuration
 - Fulcio certificate validation
-- Rekor transparency-log evidence and checkpoints
-- signed timestamps present in the bundle
+- supported transparency-log, checkpoint, and timestamp verification material
 - SHA-256 binding between the CEP 27 subject and package bytes
 
 Repodata can additionally bind exact `.sigs` bytes by SHA-256 and size. That
@@ -57,9 +55,9 @@ valid signature makes package contents safe.
 
 | Threat | Mitigation | Remaining risk |
 | --- | --- | --- |
-| Artifact substitution | CEP 27 subject SHA-256 must match exact artifact bytes | SHA-256 or signer compromise |
+| Artifact substitution | CEP 27 subject SHA-256 must match exact artifact bytes | Failure of SHA-256 collision resistance |
 | Repodata sidecar substitution | Repodata advertises exact size and SHA-256 before parsing | Compromised or unauthenticated repodata |
-| Prefix.dev sidecar substitution | Strict mode fails on absence and every bundle must bind the exact package digest and target channel | Without a repodata commitment or independent identity requirement, channel admission remains the trust assumption |
+| Prefix.dev sidecar substitution | Strict mode fails on absence and requires at least one valid bundle to bind the exact package digest. An included `targetChannel` must match | Without a repodata commitment or independent identity requirement, channel admission remains the trust assumption |
 | Cross-channel replay | An included `targetChannel` must match the supplied channel | CEP 27 permits an absent target channel |
 | Transparency-log omission | Sigstore verification requires supported verification material | Trust-root or verifier compromise |
 | Converted PyPI bundle without canonical Rekor entry | Verification fails closed without authenticated conversion provenance | A future standard must define the exception |
@@ -68,25 +66,6 @@ valid signature makes package contents safe.
 | Unrelated valid identity | An explicit verification can require an exact certificate identity and issuer | No channel standard distributes that requirement |
 | Time-of-check package replacement during signing | The artifact is rehashed before bundle output is committed | An authorized signer can still sign malicious bytes |
 | Embedded source path escape | Bounded reads, path containment, and symlink rejection | Source evidence remains report-only |
-
-## Authorization gap
-
-A cryptographically valid bundle authenticates the certificate identity and
-OIDC issuer. It does not authorize that identity for a package or channel.
-
-`conda sigstore verify` can apply an exact identity and issuer supplied for that
-invocation. This is an explicit consumer requirement, not a discovered channel
-delegation, and it is not stored in `.condarc`.
-
-The plugin rejects two unsafe shortcuts:
-
-- accepting any valid Fulcio identity as a publisher
-- asking every consumer to maintain package and identity allowlists in
-  `.condarc`
-
-It also does not assume undocumented channel admission behavior. The separate
-[installation verification explanation](install-verification.md) describes the
-evidence-validity boundary without treating it as publisher authorization.
 
 ## Offline risk
 
@@ -115,17 +94,3 @@ The plugin does not prove:
 - repodata transparency
 
 Those properties require separate standards, controls, and evidence.
-
-## Incident response
-
-When a signing identity, workflow, trust root, or channel is compromised:
-
-1. stop relying on affected evidence
-2. rotate the affected credentials or trust material
-3. identify artifacts and cached sidecars associated with the incident
-4. remove or supersede affected channel records and sidecars
-5. update the verifier and trust material through an authenticated path
-6. re-audit retained artifacts and environments
-
-Report verifier bypasses privately as described in the repository security
-policy.

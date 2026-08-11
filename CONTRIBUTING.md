@@ -71,6 +71,35 @@ Documentation uses Sphinx, MyST Markdown, `conda-sphinx-theme`, and
 `docs/tutorials`, task instructions in `docs/how-to`, exact contracts in
 `docs/reference`, and design context in `docs/explanation`.
 
+## Package-verifier conformance
+
+Before claiming stable end-to-end enforcement, exercise both package formats,
+classic and libmamba solves, monolithic and sharded repodata, authenticated
+channels and mirrors, and online and offline cache states.
+
+The integration must demonstrate that:
+
+1. valid, exact artifact-bound CEP 27 evidence succeeds
+2. artifact substitution fails before extraction
+3. descriptor-pinned sidecar substitution fails before parsing
+4. an absent descriptor selects required adjacent evidence
+5. a missing adjacent sidecar fails closed
+6. target-channel replay fails
+7. classic and libmamba solver paths cannot bypass verification
+8. local-file and unsupported explicit `MatchSpec` inputs fail closed
+9. retained archives and `--download-only` cannot bypass verification
+10. dry runs and remove-only transactions perform no package verification or
+    prefix mutation
+11. force reinstalls reverify the incoming archive
+12. disabling `safety_checks` or transaction rollback does not disable
+    verification
+13. verification failure causes no unlink or link actions
+14. package-controlled code or files are not processed before the decision
+
+An unrelated but cryptographically valid Sigstore identity can satisfy the
+current validity-only verifier. Authorization conformance requires a future
+delegation standard and is not part of this matrix.
+
 ## Releases
 
 Maintainers create a version tag after CI succeeds. The release workflow builds

@@ -11,21 +11,18 @@ The plugin answers the first three. Current conda standards do not provide the
 delegation needed to answer the fourth without consumer-authored policy or
 undocumented trust in channel admission.
 
-## Signing flow
+## Signing boundary
 
-`conda sigstore attest`:
+Signing binds the final package bytes and requested target channel in a CEP 27
+statement, then uses Sigstore to authenticate the signer and record the event.
+The package is hashed again before output is committed so a package changed
+during the interactive signing flow cannot produce successful evidence.
 
-1. hashes the final package bytes
-2. builds an in-toto Statement v1 with the CEP 27 predicate type
-3. records the requested target channel
-4. obtains an OIDC identity and short-lived Fulcio certificate
-5. DSSE signs the statement and records the event in Rekor
-6. verifies the completed bundle locally
-7. confirms that the package did not change during signing
-8. writes one Bundle v0.3 object as `<artifact>.sigstore.json`
-
-Channel tooling assembles one or more complete bundle objects in the JSON array
-served as `<artifact>.sigs`. Signing and channel publication remain separate.
+The result is one portable Sigstore bundle. Channel tooling remains responsible
+for publishing the package and assembling any channel sidecar. This separation
+lets other CEP 27 producers and consumers interoperate without sharing an
+upload implementation. See [Commands](../reference/commands.md) and
+[Standards and formats](../reference/standards.md) for the exact contracts.
 
 The upload credential and signing identity are separate. A publishing tool may
 acquire one OIDC token for a channel and another for Sigstore. Neither token is
@@ -43,64 +40,56 @@ The shared boundary is the standard Sigstore bundle and CEP 27 statement, so
 the Python plugin does not embed `sigstore-rs` or duplicate the Rust upload
 client.
 
-## Verification flow
+## Verification boundary
 
-Direct verification proceeds in this order:
+Verification has three layers: the sidecar must be acquired without ambiguity,
+Sigstore must authenticate its cryptographic material, and a strict CEP 27
+statement must bind the result to the package bytes and requested channel.
+Keeping those layers separate makes failures attributable and keeps transport
+metadata out of the signed statement.
 
-1. Hash the exact artifact bytes.
-2. Read one bounded Bundle v0.3 object or nonempty bundle array.
-3. Process every array element independently.
-4. Let sigstore-python verify DSSE, certificate trust, transparency-log, and
-   timestamp evidence.
-5. Extract the authenticated certificate identity and OIDC issuer.
-6. Validate the strict CEP 27 statement shape, artifact filename, and digest.
-7. If the statement includes `targetChannel` and the caller supplied a channel,
-   require them to match.
-8. Report every verified predicate, signer, timestamp, and failure.
-
-One valid artifact-bound CEP 27 bundle is sufficient for a verified result.
-Malformed or unrelated siblings remain visible but do not create a denial of
-service against a valid sibling. A malformed sidecar container still fails.
+Sidecar entries are independent because a channel can publish evidence from
+more than one signer. An invalid or unrelated sibling remains visible without
+overturning a valid artifact-bound statement. The container itself must still
+be well formed so a verifier never has to guess which bytes constitute an
+entry.
 
 ## Installation boundary
 
-The plugin registers a direct package-verifier hook against the unreleased API
-in conda/conda#16518. The flat `plugins.conda_sigstore_enforce` setting is false
-by default. When enabled, the verifier uses a descriptor-pinned `.sigs`
-sidecar when advertised and otherwise requires the deterministic adjacent
-`.v0.sigs` sidecar. Every failure blocks extraction.
+The package-verifier hook places the check after download but before extraction.
+That is the last point where conda has the selected URL, the expected digest,
+and the final archive while it can still reject the package before modifying a
+prefix. The selected URL and SHA-256 are also sufficient for adjacent discovery,
+so this path does not depend on conda preserving a new repodata field.
 
-This boundary validates evidence, not publisher authorization. The selected
-package URL and SHA-256 supplied by the hook are sufficient for adjacent
-discovery and artifact binding, so install verification does not require conda
-to preserve a new repodata field. See
+The hook is an integration preview against conda/conda#16518 and remains
+disabled by default. See
 [Installation verification across package managers](install-verification.md)
 and [Upstream integration contracts](../reference/upstream-contracts.md).
 
-## Repodata discovery
+## Transport choices
 
-The draft repodata mode uses an `attestations` descriptor in repodata to select
-the sidecar by exact SHA-256 and byte size. Consumers fetch `<artifact>.sigs`
-only when the descriptor exists and validate both fields before JSON parsing.
+The draft repodata transport lets channel metadata commit to the exact sidecar
+bytes. That commitment makes sidecar discovery explicit and protects the
+container before it is parsed.
 
-The repodata-advertised `.sigs` transport is proposed in conda/ceps#142. The
-implementation calls this mode `repodata`.
+Prefix.dev already publishes deterministic adjacent sidecars without that
+repodata commitment. Supporting the existing convention provides useful
+interoperability and install enforcement without waiting for channel metadata
+changes, but the weaker discovery property must remain visible.
 
-Prefix.dev compatibility mode uses only the `.v0.sigs` naming convention. It
-can verify the bundle and artifact binding but cannot bind the selected
-sidecar bytes to repodata. Audit selects it explicitly. Strict installation
-also requires it when no descriptor exists because the enabled setting already
-requires evidence for every selected package. A present descriptor remains
-authoritative and any failure is fatal.
+When a descriptor is present, it stays authoritative. Falling back after an
+advertised sidecar fails would let an attacker replace stronger metadata-bound
+evidence with an unpinned adjacent file. Exact filenames and discovery rules
+belong in [Standards and formats](../reference/standards.md).
 
 ## Cache design
 
-Repodata-advertised sidecar bytes are content-addressed and rehashed on every
-read. A successfully verified adjacent sidecar is cached by content digest and
-referenced by artifact SHA-256, credential-free channel, and filename. Cached
-evidence is cryptographically reverified and is never reused as a verdict. An
-extracted-only package cache entry cannot satisfy an audit that needs to hash
-the original archive bytes.
+The cache stores evidence bytes and enough artifact context to rediscover them.
+It does not store a verification verdict. Every read rehashes and
+cryptographically reverifies the evidence because trust material and verifier
+behavior can change. Auditing also needs the original archive bytes, which an
+extracted-only package cache entry cannot provide.
 
 ## Separate evidence classes
 
@@ -116,18 +105,18 @@ Publication, build, and source claims answer different questions:
 does not assign a SLSA level, prove benign source contents, or turn source
 evidence into package publisher authorization.
 
-## Standard publisher delegation is out of scope
+(publisher-delegation)=
+## Publisher delegation belongs in a standard
 
-Sigstore authenticates identities but intentionally expects a verifier to know
-which identity it trusts. CEP 27 leaves trust distribution open. The draft
-sidecar proposal distributes bundles but explicitly leaves upload authorization
-outside its scope.
+A consumer-authored allowlist cannot establish what a channel delegated. Future
+publisher authorization therefore needs either a standard channel-admission
+proof or a standard channel-independent identity delegation. Keeping that work
+out of local plugin configuration avoids turning every consumer into a policy
+authority with different answers for the same channel.
 
-No accepted conda standard distributes publisher delegation to consumers.
-Prefix.dev's public client does not establish whether server admission binds
-the uploader to the certificate identity. An operator can require an exact
-certificate identity and issuer for one explicit `verify` invocation, but the
-plugin does not persist that requirement or infer it from a channel. Future
-publisher authorization needs either a standard channel-admission proof or a
-standard channel-independent identity delegation. The install verifier does
-not supply that missing delegation.
+Such a standard would need to define which admitted bundle represents the
+publisher, how that signer maps to an uploader identity, and how delegation,
+rotation, revocation, history, and mirrors behave. It would also need to admit
+review or provenance bundles without accidentally granting publication
+authority. The repodata sidecar proposal deliberately leaves those questions
+out of scope.

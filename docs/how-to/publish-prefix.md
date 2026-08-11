@@ -8,7 +8,10 @@ These are Prefix-specific producer workflows. Prefix.dev serves uploaded
 bundles through its `.v0.sigs` transport, not the draft repodata-advertised
 `.sigs` transport.
 
-## Configure Repository Access
+You need a Prefix.dev channel, a GitHub repository, a built conda package, and
+permission to configure Trusted Publishing for both services.
+
+## Configure repository access
 
 Create the target channel, then open **Settings → Repository Access** and add a
 trusted publisher. Specify the GitHub owner, repository, and exact workflow
@@ -83,14 +86,9 @@ Attach attestations to exactly one package per upload. A CEP 27 statement has
 exactly one subject, so do not sign a glob that resolves to multiple packages
 as one statement.
 
-The open-source `rattler_upload` client obtains a trusted-publishing upload
-token separately from the supplied attestation. Its `create_upload_form`
-function adds the attestation as multipart text, then
-`upload_package_to_prefix` sends that form with the bearer token. The
-[pinned client implementation](https://github.com/conda/rattler/blob/a1120c0ff11eb50dd2f6c075dee04a652cc162a7/crates/rattler_upload/src/upload/prefix.rs)
-does not compare the upload identity with the bundle certificate identity.
-Public server behavior does not establish that comparison either. Treat server
-admission as repository hygiene, not as consumer authorization.
+The upload identity and the Sigstore signing identity are separate credentials.
+Public Prefix.dev documentation does not define their relationship as a
+portable consumer-authorization rule.
 
 ## Use GitHub's attestation action manually
 
@@ -155,10 +153,9 @@ conda sigstore verify ./example-1.0-0.conda \
 ```
 
 The result verifies the package binding and reports the actual certificate
-identity and issuer. It labels no signer as authorized. The `.v0.sigs` bytes
-are not pinned by repodata. Direct verification selects this transport
-explicitly. Strict installation requires it only when no descriptor exists and
-never uses it after a draft repodata descriptor failure.
+identity and issuer. The first output line should end in `verified`. Current
+Prefix.dev repodata does not pin the `.v0.sigs` bytes, so direct verification
+selects this transport explicitly.
 
 For the transport limitation and live fixture, see
 [Verify Prefix.dev sidecars](prefix-sidecars.md).
