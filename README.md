@@ -34,18 +34,30 @@ claim that the package is safe.
 
 ## Install
 
-Install the plugin into the same environment as conda. Until a conda package is
-published, create a dedicated conda environment and install the PyPI release
-there:
+Install the plugin into conda's base environment, which owns the `conda`
+executable. For a released version, install the PyPI package with that
+environment's Python:
 
 ```console
-conda create -n conda-sigstore -c conda-forge conda pip
-conda activate conda-sigstore
-python -m pip install conda-sigstore
+conda install -n base pip
+conda run -n base python -m pip install conda-sigstore
+conda sigstore --help
 ```
 
-The PyPI command becomes available with the first release. There is no
-published package yet.
+If `conda-pypi` is already installed with conda, the equivalent tracked install
+targets base explicitly:
+
+```console
+conda pypi -n base install conda-sigstore
+```
+
+The PyPI command becomes available with the first release. Until then, install
+from a source checkout into conda's base environment:
+
+```console
+conda run -n base python -m pip install /path/to/conda-sigstore
+conda sigstore --help
+```
 
 For development, clone this repository and use its locked Pixi environment:
 
@@ -54,12 +66,14 @@ pixi install --locked -e test
 pixi run --locked -e test conda sigstore --help
 ```
 
-Direct `pip install` into an unrelated Python environment does not register the
-plugin with the conda installation you use.
+Installing into a separate named environment does not register the plugin with
+the `conda` executable from base.
 
-Installing the plugin does not change package operations. Released conda
-versions do not yet provide the package-verifier hook and repodata descriptor
-preservation required for install enforcement.
+See the
+[installation guide](https://jezdez.github.io/conda-sigstore/how-to/install/)
+for the supported paths.
+
+Installing the plugin does not change package operations.
 
 ## Commands
 
@@ -73,10 +87,11 @@ conda sigstore audit [-n ENV | -p PREFIX] [--sources] [--prefix-sidecars] [--jso
 Start with the
 [tutorial](https://jezdez.github.io/conda-sigstore/tutorials/getting-started/)
 and the
-[Sigstore tools tutorial](https://jezdez.github.io/conda-sigstore/tutorials/sigstore-tools/).
+[standard Sigstore verification guide](https://jezdez.github.io/conda-sigstore/how-to/verify-with-sigstore/).
 For Prefix.dev publishing, follow the
 [Prefix publishing guide](https://jezdez.github.io/conda-sigstore/how-to/publish-prefix/)
-and consult the
+or [audit an installed environment](https://jezdez.github.io/conda-sigstore/how-to/audit-environment/).
+Consult the
 [command reference](https://jezdez.github.io/conda-sigstore/reference/commands/)
 for exact interfaces.
 
@@ -90,13 +105,8 @@ an authorized publisher.
 The plugin reports signer evidence and can apply an exact signer requirement to
 one explicit verification. It does not discover channel publisher delegation.
 
-Install enforcement is not registered in the current release. The future
-adapter will require repodata-advertised evidence only after conda releases
-both the pre-extraction verifier hook and opaque attestation descriptor
-preservation. Publisher authorization still needs a standard
-channel-publisher delegation contract.
-
-The required upstream contracts are documented in
+Install enforcement is not registered in the current release. The required
+conda changes are documented in
 [Upstream integration contracts](https://jezdez.github.io/conda-sigstore/reference/upstream-contracts/).
 
 ## Security boundary

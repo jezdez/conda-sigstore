@@ -56,10 +56,6 @@ issuer without turning local configuration into an invented authorization
 protocol. Use the paired `verify --cert-identity` and `--cert-oidc-issuer`
 options for an explicit one-off signer requirement.
 
-The future install verifier will enforce evidence validity and coverage, not
-signer authorization. It is not registered until conda releases the required
-hook and record-preservation contracts.
-
 See [Configuration](../reference/configuration.md) for the exact setting
 contract and [Security model](../explanation/security-model.md) for the trust
 boundary.

@@ -83,13 +83,14 @@ Attach attestations to exactly one package per upload. A CEP 27 statement has
 exactly one subject, so do not sign a glob that resolves to multiple packages
 as one statement.
 
-The open-source
-[`rattler_upload` crate](https://github.com/conda/rattler/tree/main/crates/rattler_upload)
-used by `rattler-build upload prefix` and `pixi upload prefix` authenticates the
-upload and sends a caller-supplied bundle as multipart text. Its public code
-does not compare the authenticated upload identity with the bundle certificate
-identity. Public server behavior does not establish that comparison either.
-Treat server admission as repository hygiene, not as consumer authorization.
+The open-source `rattler_upload` client obtains a trusted-publishing upload
+token separately from the supplied attestation. Its `create_upload_form`
+function adds the attestation as multipart text, then
+`upload_package_to_prefix` sends that form with the bearer token. The
+[pinned client implementation](https://github.com/conda/rattler/blob/a1120c0ff11eb50dd2f6c075dee04a652cc162a7/crates/rattler_upload/src/upload/prefix.rs)
+does not compare the upload identity with the bundle certificate identity.
+Public server behavior does not establish that comparison either. Treat server
+admission as repository hygiene, not as consumer authorization.
 
 ## Use GitHub's attestation action manually
 

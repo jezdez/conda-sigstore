@@ -62,29 +62,13 @@ One valid artifact-bound CEP 27 bundle is sufficient for a verified result.
 Malformed or unrelated siblings remain visible but do not create a denial of
 service against a valid sibling. A malformed sidecar container still fails.
 
-## Future install verification flow
+## Installation boundary
 
-Install verification is not registered in the current release. The adapter is
-retained for the conda package-verifier and record-preservation contracts that
-remain upstream work.
-
-For each selected package, the verifier:
-
-1. requires a `PackageRecord` carrying the repodata `attestations` descriptor
-2. uses the archive filename and SHA-256 supplied by conda's verifier boundary
-3. derives only the advertised `<artifact>.sigs` URL
-4. checks the exact advertised sidecar size and SHA-256 before parsing
-5. performs normal Sigstore and CEP 27 verification
-6. accepts when at least one valid CEP 27 statement binds the exact artifact
-
-Missing evidence and `MatchSpec` inputs will fail closed. The verifier will
-never probe for an undeclared `.sigs` file or consume Prefix.dev `.v0.sigs`
-sidecars. It authenticates the bundle signer but does not treat that identity as
-an authorized publisher.
-
-This flow requires conda to preserve the descriptor and provide an always-run
-verifier before extraction. It does not run through a transaction hook and is
-independent of `safety_checks`.
+Install verification is not registered in the current release. See
+[Installation verification across package managers](install-verification.md)
+for the rationale and
+[Upstream integration contracts](../reference/upstream-contracts.md) for the
+required conda interfaces.
 
 ## Repodata discovery
 
@@ -103,8 +87,8 @@ fallback.
 ## Cache design
 
 Repodata-advertised sidecar bytes are content-addressed and rehashed on every
-read. A future install verifier cannot accept an extracted-only package cache
-entry because the archive bytes are unavailable.
+read. An extracted-only package cache entry cannot satisfy an audit that needs
+to hash the original archive bytes.
 
 ## Separate evidence classes
 

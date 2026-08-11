@@ -24,17 +24,26 @@ discarded in several paths.
 
 ## Channel sidecars
 
+`conda sigstore attest` emits one raw Bundle v0.3 object. The plugin does not
+assemble a sidecar array, modify repodata, or upload channel files. This section
+defines the draft integration contract, not a runnable publication workflow.
+
 Channel implementations need to:
 
 - accept one or more complete Sigstore bundles associated with an immutable
   package artifact
 - serve a deterministic JSON bundle array at `<artifact>.sigs`
+- serialize the final array once, then calculate the descriptor from those
+  exact served bytes
 - compute `attestations.sha256` and `attestations.size` from the exact served
   bytes
 - add the descriptor to every relevant repodata representation and shard
 - preserve it through patching, JLAP, compression, mirroring, and indexing
 - publish sidecars before or atomically with referencing repodata
 - prevent sidecar changes under an unchanged descriptor
+
+The exact descriptor and container formats are defined in
+[Standards and formats](standards.md).
 
 Server-side cryptographic validation is repository hygiene. It is not itself a
 portable proof that the signer was authorized to publish.

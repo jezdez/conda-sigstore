@@ -8,7 +8,8 @@ bundle, and interprets the reported evidence.
 You need:
 
 - conda 25.5 or newer
-- `conda-sigstore` available to the Python runtime that runs conda
+- `conda-sigstore` available to the Python runtime that runs conda, as described
+  in [Install conda-sigstore](../how-to/install.md)
 - a `.conda` or `.tar.bz2` package that you are authorized to publish
 - an OIDC identity accepted by Sigstore, such as a browser identity or GitHub
   Actions workload identity
@@ -89,9 +90,9 @@ for the same artifact.
 You now have a complete Bundle v0.3 object. Channel tooling is responsible for
 uploading it with the package and serving the channel-specific sidecar format.
 
-- Follow [Add draft repodata-advertised sidecars](../how-to/repodata-sidecars.md)
-  for the integrity-bound `.sigs` proposal.
+- Read [Upstream integration contracts](../reference/upstream-contracts.md) for
+  the draft integrity-bound `.sigs` proposal.
 - Follow [Publish attestations to Prefix.dev](../how-to/publish-prefix.md) for
   Prefix Trusted Publishing and `.v0.sigs`.
-- Use [standard Sigstore tools](sigstore-tools.md) to inspect the bundle with an
-  independent verifier before publication.
+- Use [sigstore-python](../how-to/verify-with-sigstore.md) to inspect the bundle
+  with an independent verifier before publication.

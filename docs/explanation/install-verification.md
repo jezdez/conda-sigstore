@@ -32,7 +32,7 @@ not consume that evidence during an ordinary install.
 
 uv's attestation support is also on the producer side. Its publisher passes
 adjacent PEP 740 JSON objects to a supporting index. Its
-[current upload implementation](https://github.com/astral-sh/uv/blob/a50af60fb4162d7f94812d64c481c30a0200b6d8/crates/uv-publish/src/lib.rs#L1338-L1353)
+[current upload implementation](https://github.com/astral-sh/uv/blob/a50af60fb4162d7f94812d64c481c30a0200b6d8/crates/uv-publish/src/lib.rs)
 notes that it does not validate the interior attestation structure beyond JSON
 before upload. This is transport behavior, not consumer verification.
 

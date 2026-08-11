@@ -3,12 +3,14 @@
 `conda-sigstore` creates and verifies Sigstore publication attestations for
 conda packages without replacing conda's existing package hashes.
 
-It has two jobs:
+It has three jobs:
 
 1. A publisher creates a strict CEP 27 statement for one package and signs it
    with a short-lived Sigstore certificate.
 2. A consumer verifies the package, signed statement, certificate, and
    transparency-log evidence, then receives the authenticated signer details.
+3. An operator audits an installed environment for available publication,
+   provenance, and embedded source evidence.
 
 The plugin supports two sidecar transports:
 
@@ -22,6 +24,9 @@ The repodata-advertised `.sigs` transport remains a draft proposal in
 [conda/ceps#142](https://github.com/conda/ceps/pull/142) and may change
 incompatibly.
 :::
+
+New users should [install the plugin](how-to/install.md), run
+`conda sigstore --help`, then follow the signing and verification tutorial.
 
 ## Choose a documentation path
 
@@ -39,7 +44,7 @@ Create, inspect, and verify package publication attestations.
 :link: how-to/configure-verification
 :link-type: doc
 
-Configure verification inputs, publish sidecars, and work offline.
+Install the plugin, audit environments, configure inputs, and work offline.
 :::
 
 :::{grid-item-card} {octicon}`list-unordered` Reference
@@ -83,29 +88,29 @@ not identify which admitted bundle represents an authorized publisher.
 requirement to one explicit verification. It does not discover channel
 publisher delegation.
 
-Install enforcement is not registered in the current release. It requires two
-upstream conda contracts before it can safely validate repodata-advertised CEP
-27 evidence before extraction. This validates evidence, but does not authorize
-the signer. See
+Install enforcement is not registered in the current release. See
 [Installation verification across package managers](explanation/install-verification.md)
-for the current pip, uv, Pixi, and conda comparison.
+for the current package-manager comparison and
+[Upstream integration contracts](reference/upstream-contracts.md) for the
+required conda changes.
 
 ```{toctree}
 :hidden:
 :caption: Tutorial
 
 tutorials/getting-started
-tutorials/sigstore-tools
 ```
 
 ```{toctree}
 :hidden:
 :caption: How-to guides
 
+how-to/install
+how-to/audit-environment
 how-to/configure-verification
 how-to/publish-prefix
 how-to/prefix-sidecars
-how-to/repodata-sidecars
+how-to/verify-with-sigstore
 how-to/offline
 ```
 
@@ -115,6 +120,7 @@ how-to/offline
 
 reference/commands
 reference/configuration
+reference/json-output
 reference/standards
 reference/upstream-contracts
 ```

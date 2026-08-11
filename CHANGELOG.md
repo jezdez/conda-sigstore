@@ -21,13 +21,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   Sigstore staging.
 - Sphinx documentation using MyST, `conda-sphinx-theme`, `sphinx-design`, and a
   Diátaxis structure.
-- Tutorials for standard sigstore-python verification and Prefix.dev
-  attestation publishing.
+- Installation, environment-audit, standard sigstore-python verification, and
+  Prefix.dev publishing guides.
 - Optional exact signer identity and OIDC issuer verification for
   `conda sigstore verify`.
-- Versioned JSON output with artifact and observed sidecar SHA-256 digests.
+- Versioned JSON output with artifact and observed sidecar SHA-256 digests, plus
+  an exact output and exit-status reference.
 - An unregistered install-verifier adapter for the future conda hook and
   repodata record-preservation contracts.
 - Rich terminal rendering for human-readable command output.
-
-[Unreleased]: https://github.com/jezdez/conda-sigstore/commits/main

@@ -56,12 +56,11 @@ more than one signer or countersignature without changing the package artifact.
 | `sigstore verify identity` | Verifies Sigstore material, an expected identity and issuer, and a matching in-toto subject digest | It does not enforce CEP 27's exact filename, single subject, predicate type, or target channel |
 | `conda sigstore attest` | Uses sigstore-python to DSSE-sign one strict CEP 27 statement | It creates evidence but does not upload it |
 | `conda sigstore verify` | Verifies Sigstore material, artifact binding, the full CEP 27 statement contract, and an optional exact signer requirement | It cannot discover a channel's publisher delegation |
-| Future `conda-sigstore` package verifier | Would require valid repodata-advertised CEP 27 evidence before extraction | It is unregistered until conda provides the required contracts and would not authorize the signer |
 | Rattler-Build `--generate-attestation` | Creates one CEP 27 bundle per package and uploads it through Prefix Trusted Publishing | This is a Prefix-specific producer path |
 | `actions/attest` | Creates a custom Sigstore-backed in-toto attestation and stores it in GitHub | `subject-path` must resolve to one package for CEP 27 |
 | `gh attestation verify` | Retrieves GitHub-hosted evidence and applies GitHub owner and predicate criteria | It is not a replacement for CEP 27 target-channel validation |
 
-See [Use standard Sigstore tools with conda packages](../tutorials/sigstore-tools.md)
+See [Verify with sigstore-python](../how-to/verify-with-sigstore.md)
 and [Publish attestations to Prefix.dev](../how-to/publish-prefix.md) for complete
 workflows.
 
@@ -111,11 +110,12 @@ Explicit `.v0.sigs` input preserves interoperability while making the weaker
 discovery and integrity model visible. Repodata discovery never falls back to
 it.
 
-The public `rattler_upload` crate used by `rattler-build upload prefix` and
-`pixi upload prefix` does not compare a supplied bundle's signer identity with
-the Prefix upload identity. Public information does not establish whether the
-server performs that comparison. The plugin reports the signer without
-claiming Prefix authorized it.
+The pinned public client paths are documented in
+[Publish attestations to Prefix.dev](../how-to/publish-prefix.md). They do not
+compare a supplied bundle's signer identity with the Prefix upload identity.
+Public information does not establish whether the server performs that
+comparison. The plugin reports the signer without claiming Prefix authorized
+it.
 
 ## Source and build evidence
 
@@ -136,32 +136,3 @@ Converted PEP 740 or PyPI bundles without canonical Rekor entries are reported
 as invalid. The draft source index does not carry authenticated conversion
 provenance that can justify disabling Sigstore transparency-log checks, so the
 plugin does not apply that exception automatically.
-
-## Ecosystem alignment
-
-[PyPI attestations](https://docs.pypi.org/attestations/) and
-[npm provenance](https://docs.npmjs.com/generating-provenance-statements)
-combine Sigstore-backed evidence with repository admission and publisher
-configuration. They establish useful producer and registry precedents, but an
-ordinary `pip install` or `npm install` does not gate on those attestations.
-Registry publication checks are not the same as client installation policy.
-
-No accepted conda standard currently distributes channel publisher delegation.
-The plugin therefore verifies evidence and reports the authenticated identity
-and issuer. An operator may apply an exact identity and issuer to one explicit
-verification, but that requirement is not channel policy.
-
-The future, unregistered install verifier could require evidence coverage
-without solving publisher delegation. Missing evidence would fail when the
-consumer enabled the check. A valid signer would still remain authenticated
-evidence rather than an authorized publisher.
-
-## Out of scope for the first release
-
-- the experimental Prefix `siglog` repodata transparency log
-- server-side countersigning requirements
-- a new conda build-provenance predicate
-- consumer-authored publisher allowlists
-- install-time publisher authorization without standardized channel delegation
-- treating an arbitrary valid Sigstore identity as an authorized publisher
-- automatic downgrade to Prefix.dev sidecars

@@ -58,14 +58,6 @@ available only for `repodata` sidecars already stored under the advertised
 digest. Prefix `.v0.sigs` sidecars are unpinned Prefix.dev inputs and must be
 supplied explicitly.
 
-## Future offline installation enforcement
-
-Install enforcement is not registered in current releases. Once the required
-conda contracts ship, offline enforcement will require every selected package
-to have a preserved repodata descriptor, retained archive, exact cached
-sidecar, and available Sigstore trust material. A cache miss, `MatchSpec`, or
-extracted-only cache entry must fail closed.
-
 ## Plan trust-root updates
 
 Offline operation trades freshness for availability. Define how operators

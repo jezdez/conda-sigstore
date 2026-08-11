@@ -48,11 +48,11 @@ and statement, but it cannot prove which sidecar the channel index selected.
 
 ## Do not infer server admission policy
 
-The open-source `rattler_upload` crate used by `rattler-build upload prefix`
-and `pixi upload prefix` authenticates an uploader and can submit a bundle. Its
-public code does not compare the bundle signer with the upload identity, and
-public information does not establish whether Prefix.dev's server makes that
-comparison. Treat signer-to-uploader matching as unknown.
+The pinned public client paths are documented in
+[Publish attestations to Prefix.dev](publish-prefix.md). They do not compare the
+bundle signer with the upload identity. Public information does not establish
+whether Prefix.dev's server makes that comparison. Treat signer-to-uploader
+matching as unknown.
 
 ## Avoid silent fallback
 
@@ -60,8 +60,9 @@ Do not probe `.v0.sigs` after a missing or invalid repodata-advertised `.sigs`
 descriptor. That turns descriptor stripping into a downgrade. Prefix.dev
 sidecar discovery must remain an explicit user action.
 
-Follow
-[Add draft repodata-advertised sidecars](repodata-sidecars.md) to publish
-integrity-bound sidecars.
+Read [Standards and formats](../reference/standards.md) for the draft
+integrity-bound `.sigs` format and
+[Upstream integration contracts](../reference/upstream-contracts.md) for the
+channel requirements.
 For the producer workflow, see
 [Publish attestations to Prefix.dev](publish-prefix.md).

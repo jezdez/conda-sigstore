@@ -4,8 +4,8 @@ The plugin verifies that a Sigstore-authenticated identity signed a strict CEP
 27 statement for exact conda package bytes. It reports that identity and the
 available evidence. An explicit verification may require an exact identity and
 issuer supplied independently by the operator. The plugin does not discover a
-channel's publisher delegation. A future, unregistered install verifier would
-enforce valid repodata-advertised evidence without authorizing the signer.
+channel's publisher delegation. Install verification is not registered in the
+current release.
 
 ## Protected assets
 
@@ -30,9 +30,10 @@ Repodata can additionally bind exact `.sigs` bytes by SHA-256 and size. That
 binding is only as strong as the channel metadata path, including TLS.
 
 A channel server's claim that an uploader was authorized is not currently a
-trust anchor. The public `rattler_upload` client does not compare an attached
-bundle signer with the uploader identity. Public information does not
-establish whether Prefix.dev's server makes that comparison.
+trust anchor. The observed public client paths are documented in
+[Publish attestations to Prefix.dev](../how-to/publish-prefix.md). Public
+information does not establish whether Prefix.dev's server compares the bundle
+signer with the uploader identity.
 
 ## Adversaries and assumptions
 
@@ -58,8 +59,6 @@ valid signature makes package contents safe.
 | Artifact substitution | CEP 27 subject SHA-256 must match exact artifact bytes | SHA-256 or signer compromise |
 | Repodata sidecar substitution | Repodata advertises exact size and SHA-256 before parsing | Compromised or unauthenticated repodata |
 | Prefix.dev sidecar substitution | Bundle still binds the package digest | No repodata commitment to the selected sidecar |
-| Missing future install evidence | The future verifier fails closed without a repodata descriptor | A channel can make packages unavailable by omitting evidence |
-| Future install transport downgrade | The future verifier uses only the advertised `.sigs` sidecar | Prefix.dev compatibility remains available only to explicit commands |
 | Cross-channel replay | An included `targetChannel` must match the supplied channel | CEP 27 permits an absent target channel |
 | Transparency-log omission | Sigstore verification requires supported verification material | Trust-root or verifier compromise |
 | Converted PyPI bundle without canonical Rekor entry | Verification fails closed without authenticated conversion provenance | A future standard must define the exception |
@@ -84,15 +83,9 @@ The plugin rejects two unsafe shortcuts:
 - asking every consumer to maintain package and identity allowlists in
   `.condarc`
 
-It also does not assume undocumented channel admission behavior. The future,
-unregistered install verifier would require evidence but accept any signer
-whose Sigstore bundle and exact artifact-bound CEP 27 statement are valid. That
-would be evidence-validity enforcement, not publisher authorization.
-
-The plugin does not register install enforcement until conda preserves the
-repodata attestation descriptor and provides the always-run package-verifier
-hook. The future verifier fails closed for missing evidence and inputs
-represented only by a `MatchSpec`.
+It also does not assume undocumented channel admission behavior. The separate
+[installation verification explanation](install-verification.md) describes the
+evidence-validity boundary without treating it as publisher authorization.
 
 ## Offline risk
 

@@ -48,8 +48,7 @@ expected channel.
 
 The result reports the authenticated certificate identity and issuer. It does
 not call the signer authorized for the channel. `--json` emits the versioned
-result envelope with artifact and sidecar SHA-256 digests, all predicates,
-timestamps, and sibling failures.
+result described in [JSON output and exit status](json-output.md).
 
 Pass `--cert-identity` and `--cert-oidc-issuer` together to require one exact
 certificate SAN and literal OIDC issuer for this verification. These option
@@ -74,6 +73,10 @@ By default, audit reads only repodata-advertised `.sigs` sidecars. The package
 record must contain an `attestations` descriptor with the exact sidecar SHA-256
 and size. Missing descriptors are not probed.
 
+Released conda versions do not preserve that unknown repodata field through
+solver, cache, and prefix records. Default audits therefore report `missing`
+when a retained archive has no preserved descriptor.
+
 `--prefix-sidecars` explicitly selects Prefix.dev's current, unpinned
 `.v0.sigs` naming convention. It never runs as an automatic fallback.
 
@@ -81,18 +84,10 @@ and size. Missing descriptors are not probed.
 archive. SLSA and source evidence are report-only and do not assign a SLSA level
 or authorize the package publisher.
 
-Human and JSON output can report:
-
-- `verified`
-- `missing`
-- `retrieval-failed`
-- `invalid`
-- `untrusted-identity`
-- `record-digest-only`
-- `evidence-unavailable`
-
 An audit describes currently available evidence. It does not prove that the
-package was verified before extraction or installation.
+package was verified before extraction or installation. See
+[Audit an installed environment](../how-to/audit-environment.md) for the full
+workflow and [JSON output and exit status](json-output.md) for status meanings.
 
 ## Ordinary package operations
 
