@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 SETTING_NAME = "conda_sigstore"
 DEFAULT_MAX_SIDECAR_BYTES = 10 * 1024 * 1024
+MAX_TRUST_CONFIG_BYTES = 1024 * 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,6 +101,7 @@ class SigstoreSettings:
 
 __all__ = [
     "DEFAULT_MAX_SIDECAR_BYTES",
+    "MAX_TRUST_CONFIG_BYTES",
     "SETTING_NAME",
     "SigstoreSettings",
 ]

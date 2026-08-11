@@ -23,7 +23,7 @@ This checklist records the full repository review completed on 2026-08-11. Each 
 
 - [x] 12. Delete unused receipt-era verifier state and private Sigstore configuration access.
 - [x] 13. Declare directly imported dependencies and document dependencies supplied by conda.
-- [ ] 14. Bound trust configuration and source archive input before parsing.
+- [x] 14. Bound trust configuration and source archive input before parsing.
 - [ ] 15. Resolve the unused cache-lock seam by using conda's disk lock for production writes or documenting and simplifying the atomic content-addressed design.
 - [ ] 16. Move draft embedded source-attestation behavior out of `audit.py` into one cohesive module.
 - [ ] 17. Remove unused internal surfaces and align entry-point, prefix resolution, and Sphinx setup with the peer plugins.

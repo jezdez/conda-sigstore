@@ -7,7 +7,9 @@ import os
 import tempfile
 from pathlib import Path
 
+from .settings import MAX_TRUST_CONFIG_BYTES
 from .statements import PublishStatement
+from .transport import read_bounded_file
 
 
 def sha256_file(path: Path) -> str:
@@ -34,7 +36,13 @@ def sign_statement(
     from .verification import SigstoreVerifier
 
     trust_config = (
-        ClientTrustConfig.from_json(trust_config_path.read_text(encoding="utf-8"))
+        ClientTrustConfig.from_json(
+            read_bounded_file(
+                trust_config_path,
+                MAX_TRUST_CONFIG_BYTES,
+                description="trust configuration",
+            ).decode("utf-8")
+        )
         if trust_config_path is not None
         else ClientTrustConfig.production()
     )

@@ -154,6 +154,16 @@ def test_direct_verification_rejects_artifact_changed_by_verifier(tmp_path) -> N
     assert result.failures[-1].code == "artifact-changed"
 
 
+def test_local_trust_configuration_is_bounded(tmp_path) -> None:
+    from conda_sigstore.settings import MAX_TRUST_CONFIG_BYTES
+
+    trust_config = tmp_path / "trust.json"
+    trust_config.write_bytes(b"x" * (MAX_TRUST_CONFIG_BYTES + 1))
+
+    with pytest.raises(ValueError, match="trust configuration exceeds"):
+        SigstoreVerifier(trust_config=trust_config).trust_model
+
+
 def test_sigstore_parser_rejects_unsupported_bundle_media_type() -> None:
     result = verify_bundles(
         Sidecar(

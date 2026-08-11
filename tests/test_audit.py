@@ -535,6 +535,41 @@ def test_hashes_archive_before_extraction(
     assert "verified package digest" in str(report[0]["failure"])
 
 
+def test_source_audit_bounds_retained_package_archive(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    import conda_package_handling.api
+
+    from conda_sigstore import audit
+
+    archive = tmp_path / "retained.conda"
+    archive.write_bytes(b"oversized")
+    monkeypatch.setattr(audit, "MAX_PACKAGE_ARCHIVE_BYTES", 4)
+    monkeypatch.setattr(
+        EnvironmentAuditor,
+        "retained_archive",
+        staticmethod(lambda _record: archive),
+    )
+    monkeypatch.setattr(
+        conda_package_handling.api,
+        "extract",
+        lambda *_args, **_kwargs: pytest.fail("oversized archive must not be parsed"),
+    )
+    auditor = EnvironmentAuditor(SigstoreSettings(), FakeVerifier({}, {}))
+
+    report = auditor.audit_sources(
+        SimpleNamespace(fn="pkg-1-0.conda"),
+        package_verified=True,
+        package_sha256=hashlib.sha256(archive.read_bytes()).hexdigest(),
+    )
+
+    assert report[0]["status"] == "evidence-unavailable"
+    assert report[0]["failure"] == (
+        "the retained package archive exceeds the 4-byte audit limit"
+    )
+
+
 def package_record(
     archive: Path,
     sidecar: bytes,

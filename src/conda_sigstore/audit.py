@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from .verification import BundleVerifier
 
 MAX_RENDERED_RECIPE_BYTES = 1024 * 1024
+MAX_PACKAGE_ARCHIVE_BYTES = 4 * 1024 * 1024 * 1024
 AuditTransport = Literal["repodata", "prefix"]
 
 
@@ -598,6 +599,16 @@ class EnvironmentAuditor:
                     "verification_scope": "draft-source-attestation",
                 }
             ]
+        archive_too_large = {
+            "status": "evidence-unavailable",
+            "failure": (
+                "the retained package archive exceeds the "
+                f"{MAX_PACKAGE_ARCHIVE_BYTES}-byte audit limit"
+            ),
+            "verification_scope": "draft-source-attestation",
+        }
+        if archive.stat().st_size > MAX_PACKAGE_ARCHIVE_BYTES:
+            return [archive_too_large]
         try:
             expected_package_sha256 = validate_sha256(
                 package_sha256,
@@ -612,8 +623,12 @@ class EnvironmentAuditor:
                 root = Path(temporary)
                 snapshot = root / f"package{extension}"
                 digest = hashlib.sha256()
+                copied = 0
                 with archive.open("rb") as source, snapshot.open("wb") as destination:
                     for block in iter(lambda: source.read(1024 * 1024), b""):
+                        copied += len(block)
+                        if copied > MAX_PACKAGE_ARCHIVE_BYTES:
+                            return [archive_too_large]
                         digest.update(block)
                         destination.write(block)
                 if not hmac.compare_digest(

@@ -25,7 +25,9 @@ from .model import (
     VerifiedEvidence,
 )
 from .provenance import SlsaProvenance
+from .settings import MAX_TRUST_CONFIG_BYTES
 from .statements import InTotoStatement, PublishStatement
+from .transport import read_bounded_file
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -203,7 +205,13 @@ class SigstoreVerifier:
                 if self.trust_config is None:
                     config = ClientTrustConfig.production(offline=self.offline)
                 else:
-                    config = ClientTrustConfig.from_json(self.trust_config.read_text())
+                    config = ClientTrustConfig.from_json(
+                        read_bounded_file(
+                            self.trust_config,
+                            MAX_TRUST_CONFIG_BYTES,
+                            description="trust configuration",
+                        ).decode("utf-8")
+                    )
                 self._trust_model = config
         return self._trust_model
 
