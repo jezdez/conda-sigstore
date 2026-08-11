@@ -1,6 +1,9 @@
 # Code review findings
 
-This checklist records the full repository review completed on 2026-08-11. Each numbered item is resolved in its own commit. Items that depend on unreleased conda work are fixed locally by removing claims that the unavailable behavior works and retaining only code that can be tested honestly.
+This checklist records the repository reviews completed on 2026-08-11. Each
+numbered item is resolved in a focused commit. Items that depend on unreleased
+conda work are fixed locally by removing claims that the unavailable behavior
+works and retaining only code that can be tested honestly.
 
 ## Release contract
 
@@ -36,8 +39,27 @@ This checklist records the full repository review completed on 2026-08-11. Each 
 - [x] 20. Correct install, sidecar digest, offline cache, tutorial, and Prefix workflow documentation.
 - [x] 22. Expand the signer identity variables in the raw Sigstore verification tutorial command.
 
+## Coverage, documentation, and redundancy follow-up
+
+- [x] 23. Remove the mapping round trip from operational settings parsing.
+- [x] 24. Remove unused SLSA source fields and cover malformed provenance.
+- [x] 25. Cover malformed embedded source-attestation declarations.
+- [x] 26. Cover installed-environment audit ordering, isolation, cache, and source dispatch.
+- [x] 27. Cover fail-closed network transport behavior and preserve oversized local-input status.
+- [x] 28. Cover sidecar-cache misses, bounds, locking, and write-failure recovery.
+- [x] 29. Cover verification command exit status for accepted and rejected evidence.
+- [x] 30. Remove duplicate transport test scaffolding.
+- [x] 31. Restore the CLI test package marker required for pytest module isolation.
+- [x] 32. Use conda's channel-token parser for target-channel validation.
+- [x] 33. Cover install-adapter filename and hook-digest rejection.
+- [x] 34. Reuse conda's artifact hashing primitive in standalone paths.
+- [x] 35. Cover malformed signer material and authenticated but unusable bundle evidence.
+- [x] 36. Deduplicate installed-record audit test setup.
+- [x] 37. Complete the Diátaxis documentation, exact JSON reference, install guidance, and runnable audit workflows.
+- [x] 38. Cover strict generic in-toto and CEP 27 statement rejection paths.
+
 ## Baseline
 
-- Normal suite: 116 passed, 2 live interoperability tests deselected.
-- Measured coverage: 81 percent.
+- Normal suite: 235 passed, 2 live interoperability tests deselected.
+- Measured coverage: 92 percent.
 - Ruff, formatting, ty, Pixi lock validation, strict Sphinx, actionlint, and package builds passed.
