@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from conda.exceptions import CondaError
 
 from conda_sigstore.audit import EnvironmentAuditor
 from conda_sigstore.cache import DigestCache
@@ -14,7 +15,11 @@ from conda_sigstore.exceptions import (
     TransportError,
     TrustMaterialUnavailableError,
 )
-from conda_sigstore.model import SignerIdentity, VerificationStatus
+from conda_sigstore.model import (
+    SignerIdentity,
+    VerificationResult,
+    VerificationStatus,
+)
 from conda_sigstore.settings import SigstoreSettings
 from conda_sigstore.source_attestations import (
     SourceAttestationRequirement,
@@ -180,6 +185,58 @@ def test_retained_archive_requires_exact_package_filename(
     assert EnvironmentAuditor.retained_archive(
         SimpleNamespace(fn="pkg-1-0.conda")
     ) == Path(exact.package_tarball_full_path)
+
+
+def test_audit_record_reports_digest_only_without_archive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    record = SimpleNamespace(
+        channel=SimpleNamespace(base_url="https://conda.example.org/team"),
+        fn="pkg-1-0.conda",
+        name="pkg",
+        sha256="ab" * 32,
+    )
+    monkeypatch.setattr(
+        EnvironmentAuditor,
+        "retained_archive",
+        staticmethod(lambda _record: None),
+    )
+
+    result = EnvironmentAuditor(
+        SigstoreSettings(),
+        FakeVerifier({}, {}),
+    ).audit_record(record)
+
+    assert result.status is VerificationStatus.RECORD_DIGEST_ONLY
+    assert result.artifact_sha256 == "ab" * 32
+    assert result.failures[0].code == "record-digest-only"
+
+
+def test_audit_record_rejects_retained_archive_digest_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "pkg-1-0.conda"
+    archive.write_bytes(b"different package")
+    record = SimpleNamespace(
+        channel=SimpleNamespace(base_url="https://conda.example.org/team"),
+        fn=archive.name,
+        name="pkg",
+        sha256="ab" * 32,
+    )
+    monkeypatch.setattr(
+        EnvironmentAuditor,
+        "retained_archive",
+        staticmethod(lambda _record: archive),
+    )
+
+    result = EnvironmentAuditor(
+        SigstoreSettings(),
+        FakeVerifier({}, {}),
+    ).audit_record(record)
+
+    assert result.status is VerificationStatus.INVALID
+    assert result.failures[0].code == "artifact-digest-mismatch"
 
 
 def test_source_audit_requires_verified_package_publication() -> None:
@@ -710,6 +767,11 @@ def test_repodata_audit_reports_missing_descriptor(
         ("repodata", "digest-mismatch", VerificationStatus.RETRIEVAL_FAILED),
         ("repodata", "invalid-sidecar", VerificationStatus.INVALID),
         ("repodata", "sidecar-too-large", VerificationStatus.RETRIEVAL_FAILED),
+        (
+            "repodata",
+            "offline-cache-miss",
+            VerificationStatus.EVIDENCE_UNAVAILABLE,
+        ),
         ("prefix", "missing-sidecar", VerificationStatus.MISSING),
     ],
 )
@@ -775,3 +837,105 @@ def test_environment_audit_does_not_hide_programming_failure(
 
     with pytest.raises(RuntimeError, match="boom"):
         auditor.audit_environment(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "error",
+    [CondaError("conda failed"), OSError("archive failed")],
+    ids=["conda", "filesystem"],
+)
+def test_environment_audit_isolates_expected_record_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    error: Exception,
+) -> None:
+    import conda.core.prefix_data
+
+    record = SimpleNamespace(
+        channel=SimpleNamespace(base_url="https://conda.example.org/team"),
+        fn="pkg-1-0.conda",
+        name="pkg",
+        sha256="ab" * 32,
+    )
+
+    class FakePrefixData:
+        def __init__(self, _prefix: Path) -> None:
+            pass
+
+        def iter_records(self):
+            return iter((record,))
+
+    monkeypatch.setattr(conda.core.prefix_data, "PrefixData", FakePrefixData)
+    monkeypatch.setattr(
+        EnvironmentAuditor,
+        "audit_record",
+        lambda self, item: (_ for _ in ()).throw(error),
+    )
+
+    report = EnvironmentAuditor(
+        SigstoreSettings(),
+        FakeVerifier({}, {}),
+    ).audit_environment(tmp_path)
+
+    assert report["packages"][0]["status"] == "evidence-unavailable"
+    assert str(error) not in str(report)
+
+
+def test_environment_audit_orders_records_and_dispatches_source_audit(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    import conda.core.prefix_data
+
+    records = tuple(
+        SimpleNamespace(
+            channel=SimpleNamespace(base_url="https://conda.example.org/team"),
+            fn=f"{name}-1-0.conda",
+            name=name,
+            sha256="ab" * 32,
+        )
+        for name in ("zeta", "alpha")
+    )
+
+    class FakePrefixData:
+        def __init__(self, _prefix: Path) -> None:
+            pass
+
+        def iter_records(self):
+            return iter(records)
+
+    monkeypatch.setattr(conda.core.prefix_data, "PrefixData", FakePrefixData)
+
+    def verified(_self, record):
+        return VerificationResult(
+            status=VerificationStatus.VERIFIED,
+            artifact=record.fn,
+            artifact_sha256=record.sha256,
+            channel="https://conda.example.org/team",
+        )
+
+    audited_sources: list[str] = []
+
+    def sources(_self, record, *, package_verified, package_sha256):
+        assert package_verified
+        assert package_sha256 == record.sha256
+        audited_sources.append(record.name)
+        return [{"status": "verified", "source_index": 0}]
+
+    monkeypatch.setattr(EnvironmentAuditor, "audit_record", verified)
+    monkeypatch.setattr(EnvironmentAuditor, "audit_sources", sources)
+
+    report = EnvironmentAuditor(
+        SigstoreSettings(),
+        FakeVerifier({}, {}),
+    ).audit_environment(tmp_path, include_sources=True)
+
+    packages = report["packages"]
+    assert report["version"] == 1
+    assert report["prefix"] == str(tmp_path.resolve())
+    assert [package["artifact"] for package in packages] == [
+        "alpha-1-0.conda",
+        "zeta-1-0.conda",
+    ]
+    assert audited_sources == ["alpha", "zeta"]
+    assert packages[0]["source_evidence"] == [{"status": "verified", "source_index": 0}]
