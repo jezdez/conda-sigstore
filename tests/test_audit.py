@@ -676,10 +676,10 @@ def test_repodata_audit_reports_missing_descriptor(
     [
         ("repodata", "missing-sidecar", VerificationStatus.RETRIEVAL_FAILED),
         ("repodata", "retrieval-failed", VerificationStatus.RETRIEVAL_FAILED),
-        ("repodata", "size-mismatch", VerificationStatus.INVALID),
-        ("repodata", "digest-mismatch", VerificationStatus.INVALID),
+        ("repodata", "size-mismatch", VerificationStatus.RETRIEVAL_FAILED),
+        ("repodata", "digest-mismatch", VerificationStatus.RETRIEVAL_FAILED),
         ("repodata", "invalid-sidecar", VerificationStatus.INVALID),
-        ("repodata", "sidecar-too-large", VerificationStatus.INVALID),
+        ("repodata", "sidecar-too-large", VerificationStatus.RETRIEVAL_FAILED),
         ("prefix", "missing-sidecar", VerificationStatus.MISSING),
     ],
 )

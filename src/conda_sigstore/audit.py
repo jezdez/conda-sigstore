@@ -535,7 +535,13 @@ class EnvironmentAuditor:
                 status = VerificationStatus.MISSING
             elif exc.code == "offline-cache-miss":
                 status = VerificationStatus.EVIDENCE_UNAVAILABLE
-            elif exc.code in {"missing-sidecar", "retrieval-failed"}:
+            elif exc.code in {
+                "digest-mismatch",
+                "missing-sidecar",
+                "retrieval-failed",
+                "sidecar-too-large",
+                "size-mismatch",
+            }:
                 status = VerificationStatus.RETRIEVAL_FAILED
             else:
                 status = VerificationStatus.INVALID
