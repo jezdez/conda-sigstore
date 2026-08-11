@@ -5,8 +5,9 @@ import os
 from urllib.request import Request, urlopen
 
 import pytest
+from conda.gateways.disk.read import compute_sum
 
-from conda_sigstore.attestation import create_attestation, sha256_file
+from conda_sigstore.attestation import create_attestation
 from conda_sigstore.model import Sidecar, VerificationStatus
 from conda_sigstore.transport import SidecarTransport
 from conda_sigstore.verification import SigstoreVerifier, verify_bundles
@@ -77,6 +78,8 @@ def test_sigstore_staging_round_trip_reports_authenticated_signer(tmp_path) -> N
     expected_identity = os.environ["CONDA_SIGSTORE_STAGING_IDENTITY"]
     trust_config = ClientTrustConfig.staging()
     trust_config_path = tmp_path / "sigstore-staging.json"
+    # sigstore-python 4.5 has no public ClientTrustConfig serializer. This
+    # live-only round trip needs its exact combined trust-root and signing JSON.
     trust_config_path.write_text(trust_config._inner.to_json(), encoding="utf-8")
 
     artifact = tmp_path / "conda-sigstore-staging-0-0.conda"
@@ -96,7 +99,7 @@ def test_sigstore_staging_round_trip_reports_authenticated_signer(tmp_path) -> N
     result = verify_bundles(
         sidecar,
         artifact_name=artifact.name,
-        artifact_sha256=sha256_file(artifact),
+        artifact_sha256=compute_sum(artifact, "sha256"),
         verifier=SigstoreVerifier(trust_config=trust_config_path),
         channel=STAGING_CHANNEL,
     )

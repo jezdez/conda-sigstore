@@ -2,23 +2,15 @@
 
 from __future__ import annotations
 
-import hashlib
 import os
 import tempfile
 from pathlib import Path
 
+from conda.gateways.disk.read import compute_sum
+
 from .settings import MAX_TRUST_CONFIG_BYTES
 from .statements import PublishStatement
 from .transport import read_bounded_file
-
-
-def sha256_file(path: Path) -> str:
-    """Return the SHA-256 digest of one file without loading it into memory."""
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for block in iter(lambda: stream.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def sign_statement(
@@ -95,7 +87,7 @@ def create_attestation(
     if destination.exists():
         raise FileExistsError(f"attestation output already exists: {destination}")
 
-    digest = sha256_file(package)
+    digest = compute_sum(package, "sha256")
     statement = PublishStatement(
         package.name,
         digest,
@@ -107,7 +99,7 @@ def create_attestation(
         if trust_config_path
         else None,
     )
-    if sha256_file(package) != digest:
+    if compute_sum(package, "sha256") != digest:
         raise ValueError("package changed while its attestation was being created")
     destination.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary = tempfile.mkstemp(

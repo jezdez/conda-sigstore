@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlsplit
 
+from conda.gateways.disk.read import compute_sum
+
 from .cache import DigestCache
 from .exceptions import TransportError
 from .model import (
@@ -124,11 +126,7 @@ class EnvironmentAuditor:
                 ),
             )
 
-        digest = hashlib.sha256()
-        with archive.open("rb") as stream:
-            for block in iter(lambda: stream.read(1024 * 1024), b""):
-                digest.update(block)
-        artifact_sha256 = digest.hexdigest()
+        artifact_sha256 = compute_sum(archive, "sha256")
         record_sha256 = getattr(record, "sha256", None)
         if record_sha256 and not hmac.compare_digest(
             str(record_sha256).lower(),
