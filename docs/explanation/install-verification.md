@@ -142,3 +142,6 @@ standardized channel delegation that identifies authorized publishers.
 
 The exact upstream contract is listed in
 [Upstream integration contracts](../reference/upstream-contracts.md).
+
+For concrete `conda-lockfiles` and `conda-workspaces` commands, see
+[Verify locked environments during installation](../how-to/verify-locked-environments.md).

@@ -116,6 +116,7 @@ tutorials/getting-started
 how-to/install
 how-to/audit-environment
 how-to/configure-verification
+how-to/verify-locked-environments
 how-to/publish-prefix
 how-to/prefix-sidecars
 how-to/verify-with-sigstore

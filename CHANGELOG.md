@@ -27,8 +27,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   with strict verification disabled and enabled.
 - Sphinx documentation using MyST, `conda-sphinx-theme`, `sphinx-design`, and a
   Diátaxis structure.
-- Installation, environment-audit, standard sigstore-python verification, and
-  Prefix.dev publishing guides.
+- Installation, locked-environment verification, environment-audit, standard
+  sigstore-python verification, and Prefix.dev publishing guides.
 - Optional exact signer identity and OIDC issuer verification for
   `conda sigstore verify`.
 - Versioned JSON output with artifact and observed sidecar SHA-256 digests, plus
