@@ -43,14 +43,16 @@ Actions workflow. It runs only when `CONDA_SIGSTORE_STAGING_INTEROP=1` and
 ## Benchmarks
 
 Normal tests exclude the `benchmark` marker. The `bench` task measures disabled
-plugin startup and hermetic verification of captured Prefix evidence, then
-writes `benchmark-results.json`. The benchmark workflow preserves that file as
-an artifact without making hosted-runner timing a correctness threshold.
+hook collection, warm and cold verification of captured Prefix evidence, and
+the hashing and extraction cost of a retained 32 MiB package. It writes
+`benchmark-results.json`. The benchmark workflow preserves that file as an
+artifact without making hosted-runner timing a correctness threshold.
 
-The scheduled interoperability workflow also compares cached Prefix installs
-with enforcement disabled and enabled. It preserves raw timing data without a
-pass or fail threshold because network and hosted-runner variance are part of
-that live measurement.
+The scheduled interoperability workflow measures cached Prefix installs in
+disabled and enabled pairs, alternating their order between rounds. The JSON
+artifact includes each pair and its delta. The workflow has no pass or fail
+threshold because network and hosted-runner variance are part of that live
+measurement.
 
 ## Change the lock file
 

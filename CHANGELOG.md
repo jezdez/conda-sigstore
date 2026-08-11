@@ -20,9 +20,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   source-evidence auditing.
 - Scheduled live interoperability checks for the fixed Prefix.dev example and
   Sigstore staging.
-- Hermetic verification benchmarks and a separate workflow that preserves
-  benchmark results without imposing hosted-runner timing thresholds.
-- A scheduled informational benchmark comparing cached Prefix.dev installs
+- Hermetic cold and warm verification, retained-package hashing, and extraction
+  benchmarks with a separate workflow that preserves results without imposing
+  hosted-runner timing thresholds.
+- A scheduled informational benchmark alternating cached Prefix.dev installs
   with strict verification disabled and enabled.
 - Sphinx documentation using MyST, `conda-sphinx-theme`, `sphinx-design`, and a
   Diátaxis structure.
