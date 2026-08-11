@@ -1,20 +1,24 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
-from urllib.request import Request, urlopen
+from typing import TYPE_CHECKING
 
 import pytest
+from conda.base.context import reset_context
 from conda.gateways.disk.read import compute_sum
 
 from conda_sigstore.attestation import create_attestation
-from conda_sigstore.evidence import Sidecar, VerificationStatus
-from conda_sigstore.transport import SidecarTransport
+from conda_sigstore.evidence import Sidecar, SignerIdentity, VerificationStatus
+from conda_sigstore.statements import PublishStatement
 from conda_sigstore.verification import SigstoreVerifier, verify_bundles
 
-PREFIX_ARTIFACT = (
-    "https://prefix.dev/sigstore-example/linux-64/signed-package-2.1.0-hb0f4dca_0.conda"
-)
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from conda.testing.fixtures import CondaCLIFixture
+
 PREFIX_ARTIFACT_NAME = "signed-package-2.1.0-hb0f4dca_0.conda"
 PREFIX_ARTIFACT_SHA256 = (
     "3862a3677d33a45134a2ce3452b23f8f7459fe581cefbc3818272648cd987cfb"
@@ -31,40 +35,70 @@ GITHUB_ISSUER = "https://token.actions.githubusercontent.com"
 STAGING_CHANNEL = "https://staging.example.invalid/conda-sigstore"
 
 
-def fetch_example(url: str, max_bytes: int) -> bytes:
-    """Fetch bounded bytes for an explicitly enabled live example."""
-    request = Request(url, headers={"User-Agent": "conda-sigstore-interoperability"})
-    with urlopen(request, timeout=30) as response:
-        return response.read(max_bytes + 1)
-
-
 @pytest.mark.live_interop
 @pytest.mark.skipif(
     os.environ.get("CONDA_SIGSTORE_PREFIX_INTEROP") != "1",
     reason="set CONDA_SIGSTORE_PREFIX_INTEROP=1 to run",
 )
-def test_prefix_sidecar_fixed_example_reports_authenticated_signer() -> None:
-    artifact = fetch_example(PREFIX_ARTIFACT, 32 * 1024 * 1024)
-    assert hashlib.sha256(artifact).hexdigest() == PREFIX_ARTIFACT_SHA256
+def test_prefix_strict_install_reports_authenticated_signer(
+    conda_cli: CondaCLIFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    prefix = tmp_path / "prefix"
+    monkeypatch.setenv("CONDA_PKGS_DIRS", str(tmp_path / "pkgs"))
+    monkeypatch.setenv("CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE", "true")
+    reset_context()
 
-    sidecar = SidecarTransport(fetcher=fetch_example).load_prefix(PREFIX_ARTIFACT)
-    assert sidecar.sha256 == PREFIX_SIDECAR_SHA256
-
-    result = verify_bundles(
-        sidecar,
-        artifact_name=PREFIX_ARTIFACT_NAME,
-        artifact_sha256=PREFIX_ARTIFACT_SHA256,
-        verifier=SigstoreVerifier(),
-        channel=PREFIX_CHANNEL,
+    stdout, stderr, code = conda_cli(
+        "create",
+        "--yes",
+        "--json",
+        "--prefix",
+        prefix,
+        "--override-channels",
+        "--channel",
+        PREFIX_CHANNEL,
+        "--subdir",
+        "linux-64",
+        "--solver",
+        "classic",
+        "--no-deps",
+        "signed-package=2.1.0=hb0f4dca_0",
     )
+    assert code == 0
+    assert json.loads(stdout)["success"]
+    assert stderr == ""
 
-    assert result.status is VerificationStatus.VERIFIED
-    assert result.prefix_sidecar
-    assert result.evidence[0].identity == PREFIX_IDENTITY
-    assert result.evidence[0].issuer == GITHUB_ISSUER
-    assert result.evidence[0].verified
-    assert result.to_dict()["authorization"] == "not-evaluated"
-    assert "authorized" not in result.evidence[0].to_dict()
+    stdout, stderr, code = conda_cli(
+        "sigstore",
+        "audit",
+        "--prefix",
+        prefix,
+        "--prefix-sidecars",
+        "--json",
+    )
+    assert code == 0
+    assert stderr == ""
+    report = json.loads(stdout)
+    assert report["version"] == 1
+    assert report["prefix"] == str(prefix.resolve())
+    assert len(report["packages"]) == 1
+    package = report["packages"][0]
+    assert package["artifact"] == PREFIX_ARTIFACT_NAME
+    assert package["artifact_sha256"] == PREFIX_ARTIFACT_SHA256
+    assert package["sidecar_sha256"] == PREFIX_SIDECAR_SHA256
+    assert package["channel"] == PREFIX_CHANNEL
+    assert package["status"] == VerificationStatus.VERIFIED.value
+    assert package["authorization"] == "not-evaluated"
+    assert package["prefix_sidecar"] is True
+    assert len(package["evidence"]) == 1
+    evidence = package["evidence"][0]
+    assert evidence["identity"] == PREFIX_IDENTITY
+    assert evidence["issuer"] == GITHUB_ISSUER
+    assert evidence["predicate_type"] == PublishStatement.PREDICATE_TYPE
+    assert evidence["verified"] is True
+    assert "authorized" not in evidence
 
 
 @pytest.mark.live_interop
@@ -91,7 +125,6 @@ def test_sigstore_staging_round_trip_reports_authenticated_signer(tmp_path) -> N
     )
     bundle = output.read_text(encoding="utf-8").strip()
     sidecar = Sidecar(
-        url="local:staging",
         sha256=hashlib.sha256(bundle.encode()).hexdigest(),
         bundles=(bundle,),
     )
@@ -105,8 +138,7 @@ def test_sigstore_staging_round_trip_reports_authenticated_signer(tmp_path) -> N
     )
 
     assert result.status is VerificationStatus.VERIFIED
-    assert result.evidence[0].identity == expected_identity
-    assert result.evidence[0].issuer == GITHUB_ISSUER
+    assert result.evidence[0].signer == SignerIdentity(expected_identity, GITHUB_ISSUER)
     assert result.evidence[0].verified
     assert result.to_dict()["authorization"] == "not-evaluated"
     assert "authorized" not in result.evidence[0].to_dict()

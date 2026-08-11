@@ -13,8 +13,56 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  interop:
-    name: Prefix and Sigstore staging
+  prefix:
+    name: Prefix strict install
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@a09b6247153796b190642a2b53fac4241043cf6f # v0.10.0
+        with:
+          pixi-version: v0.76.1
+          environments: test
+          cache: true
+      - name: Run Prefix interoperability test
+        run: pixi run --locked -e test test-interop
+        env:
+          CONDA_SIGSTORE_PREFIX_INTEROP: "1"
+
+  prefix-benchmark:
+    name: Prefix install benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@a09b6247153796b190642a2b53fac4241043cf6f # v0.10.0
+        with:
+          pixi-version: v0.76.1
+          environments: test
+          cache: true
+      - name: Compare disabled and enabled Prefix installs
+        run: pixi run --locked -e test bench-live
+        env:
+          CONDA_SIGSTORE_PREFIX_BENCHMARK: "1"
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: prefix-install-benchmark-results
+          path: prefix-benchmark-results.json
+          if-no-files-found: error
+
+  sigstore-staging:
+    name: Sigstore staging
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -30,9 +78,8 @@ jobs:
           pixi-version: v0.76.1
           environments: test
           cache: true
-      - name: Run live interoperability tests
+      - name: Run Sigstore staging interoperability test
         run: pixi run --locked -e test test-interop
         env:
-          CONDA_SIGSTORE_PREFIX_INTEROP: "1"
           CONDA_SIGSTORE_STAGING_INTEROP: "1"
           CONDA_SIGSTORE_STAGING_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/interop.yml@${{ github.ref }}

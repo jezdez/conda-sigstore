@@ -16,6 +16,7 @@ Run the focused checks while developing:
 ```console
 pixi run --locked -e dev check
 pixi run --locked -e test test
+pixi run --locked -e test bench
 pixi run --locked -e docs docs
 ```
 
@@ -25,8 +26,9 @@ with `pixi run --locked -e test-py314 test`.
 ## Live interoperability
 
 Normal pull request tests exclude the `live_interop` marker. A scheduled and
-manually dispatched workflow checks the fixed Prefix.dev sidecar example and a
-fresh signing round trip against Sigstore staging.
+manually dispatched workflow performs a strict install of the fixed Prefix.dev
+example, audits the resulting environment, and runs a fresh signing round trip
+against Sigstore staging.
 
 Run the Prefix.dev check locally with:
 
@@ -37,6 +39,18 @@ CONDA_SIGSTORE_PREFIX_INTEROP=1 pixi run --locked -e test test-interop
 The staging check requires a workload identity and is intended for the GitHub
 Actions workflow. It runs only when `CONDA_SIGSTORE_STAGING_INTEROP=1` and
 `CONDA_SIGSTORE_STAGING_IDENTITY` contains the expected certificate identity.
+
+## Benchmarks
+
+Normal tests exclude the `benchmark` marker. The `bench` task measures disabled
+plugin startup and hermetic verification of captured Prefix evidence, then
+writes `benchmark-results.json`. The benchmark workflow preserves that file as
+an artifact without making hosted-runner timing a correctness threshold.
+
+The scheduled interoperability workflow also compares cached Prefix installs
+with enforcement disabled and enabled. It preserves raw timing data without a
+pass or fail threshold because network and hosted-runner variance are part of
+that live measurement.
 
 ## Change the lock file
 

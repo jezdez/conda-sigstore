@@ -79,8 +79,9 @@ skip_covered = true
 sort = "Miss"
 
 [tool.pytest.ini_options]
-addopts = ["-ra", "-v", "-m", "not live_interop"]
+addopts = ["-ra", "-v", "-m", "not live_interop and not benchmark"]
 markers = [
+  "benchmark: performance benchmarks (run with pytest-benchmark)",
   "live_interop: opt-in tests against live external services",
 ]
 testpaths = ["tests"]
@@ -126,6 +127,7 @@ ty = ">=0.0.1a7"
 
 [tool.pixi.feature.test.dependencies]
 pytest = ">=8.0"
+pytest-benchmark = ">=5.0"
 pytest-cov = ">=6.0"
 
 [tool.pixi.feature.py310.dependencies]
@@ -180,6 +182,8 @@ depends-on = ["lint", "format-check", "typecheck"]
 description = "Run static checks"
 
 [tool.pixi.feature.test.tasks]
+bench = {cmd = "pytest -m benchmark --benchmark-json benchmark-results.json -v", description = "Run benchmarks"}
+bench-live = {cmd = "pytest -o addopts= -m \"benchmark and live_interop\" tests/test_benchmarks.py --benchmark-json prefix-benchmark-results.json -v", description = "Run live Prefix benchmarks"}
 test = {cmd = "pytest", description = "Run tests"}
 test-cov = {cmd = "pytest --cov=conda_sigstore --cov-report=term-missing --cov-report=xml", description = "Run tests with coverage"}
 test-interop = {cmd = "pytest -o addopts= -ra -v -m live_interop tests/test_interop.py", description = "Run live interoperability tests"}
