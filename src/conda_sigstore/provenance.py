@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
-from .exceptions import ProvenanceError, StatementError
-from .statements import InTotoStatement
+from .exceptions import ProvenanceError
+
+if TYPE_CHECKING:
+    from .statements import InTotoStatement
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,24 +55,11 @@ class SlsaProvenance:
     builder_id: str
     build_type: str
     invocation_id: str | None
-    source_uri: str | None
-    source_digest: Mapping[str, str]
     materials: tuple[ProvenanceMaterial, ...]
     external_parameters: Mapping[str, object]
     internal_parameters: Mapping[str, object]
     started_on: str | None
     finished_on: str | None
-
-    @classmethod
-    def from_payload(
-        cls,
-        payload: bytes | str | Mapping[str, object],
-    ) -> SlsaProvenance:
-        try:
-            statement = InTotoStatement.from_payload(payload)
-        except StatementError as exc:
-            raise ProvenanceError(str(exc)) from exc
-        return cls.from_statement(statement)
 
     @classmethod
     def from_statement(cls, statement: InTotoStatement) -> SlsaProvenance:
@@ -131,8 +120,6 @@ class SlsaProvenance:
             builder_id=builder_id,
             build_type=build_type,
             invocation_id=optional_strings["invocationId"],
-            source_uri=None,
-            source_digest={},
             materials=materials,
             external_parameters=external_parameters,
             internal_parameters=internal_parameters,
@@ -145,11 +132,7 @@ class SlsaProvenance:
             "builder": self.builder_id,
             "build_type": self.build_type,
             "invocation": self.invocation_id,
-            "source": (
-                {"uri": self.source_uri, "digest": dict(self.source_digest)}
-                if self.source_uri is not None
-                else None
-            ),
+            "source": None,
             "materials": [material.to_dict() for material in self.materials],
             "external_parameters": dict(self.external_parameters),
             "internal_parameters": dict(self.internal_parameters),
