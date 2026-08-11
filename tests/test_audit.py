@@ -14,7 +14,11 @@ from conda_sigstore.audit import (
     resolve_prefix,
 )
 from conda_sigstore.cache import DigestCache
-from conda_sigstore.exceptions import TransportError
+from conda_sigstore.exceptions import (
+    BundleVerificationError,
+    TransportError,
+    TrustMaterialUnavailableError,
+)
 from conda_sigstore.model import SignerIdentity, VerificationStatus
 from conda_sigstore.settings import SigstoreSettings
 from conda_sigstore.statements import InTotoStatement, PublishStatement
@@ -85,7 +89,10 @@ class FakeVerifier:
         self.payload_type = payload_type
 
     def verify(self, bundle_json: str) -> CryptographicVerification:
-        identity = self.identities[bundle_json]
+        try:
+            identity = self.identities[bundle_json]
+        except KeyError:
+            raise BundleVerificationError("invalid bundle") from None
         return CryptographicVerification(
             self.payload_type,
             self.payloads[bundle_json],
@@ -319,6 +326,34 @@ def test_missing_indexed_bundle_fails_closed(
     assert report["bundles"][0]["status"] == "missing"
 
 
+def test_unavailable_source_trust_is_not_invalid(tmp_path: Path) -> None:
+    body = "bundle"
+    path = "attestations/source.tar.gz.0.sigstore.json"
+    bundle = tmp_path / path
+    bundle.parent.mkdir()
+    bundle.write_text(body)
+    requirement = SourceAttestationRequirement.from_recipe(
+        recipe(
+            [{"identity": "publisher@example.org", "issuer": "https://issuer"}],
+            [indexed_bundle(path, body)],
+        )
+    )[0]
+
+    class UnavailableVerifier:
+        def verify(self, bundle_json: str):
+            raise TrustMaterialUnavailableError("offline trust is unavailable")
+
+    report = requirement.audit(
+        tmp_path,
+        verifier=UnavailableVerifier(),
+        max_bytes=1024,
+    )
+
+    assert report["status"] == "evidence-unavailable"
+    assert report["bundles"][0]["status"] == "evidence-unavailable"
+    assert report["bundles"][0]["failure"] == "Sigstore trust material is unavailable"
+
+
 @pytest.mark.parametrize(
     ("payload_type", "payload", "failure"),
     [
@@ -442,6 +477,32 @@ def test_bounds_rendered_recipe_before_parsing(
 
     assert report["status"] == "invalid"
     assert report["failure"] == "rendered recipe exceeds 32 bytes"
+
+
+def test_rendered_recipe_parser_failure_does_not_echo_input(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    from conda.common.serialize import yaml
+    from ruamel.yaml import YAMLError
+
+    secret = "https://user:password@example.org/source.tar.gz"
+
+    def reject_recipe(value: str) -> None:
+        raise YAMLError(secret)
+
+    monkeypatch.setattr(yaml, "loads", reject_recipe)
+    report = source_audit(
+        monkeypatch,
+        tmp_path,
+        rendered_recipe=recipe([], []),
+        bundle_files={},
+        identities={},
+    )[0]
+
+    assert report["status"] == "invalid"
+    assert report["failure"] == "rendered recipe is not valid YAML"
+    assert secret not in str(report)
 
 
 def test_hashes_archive_before_extraction(

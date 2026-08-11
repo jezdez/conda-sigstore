@@ -13,7 +13,12 @@ from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlsplit
 
 from .cache import DigestCache
-from .exceptions import TransportError
+from .exceptions import (
+    BundleVerificationError,
+    StatementError,
+    TransportError,
+    TrustMaterialUnavailableError,
+)
 from .model import (
     AttestationDescriptor,
     SignerIdentity,
@@ -145,7 +150,24 @@ class EmbeddedSourceBundle:
                 for subject in statement.subjects()
             ):
                 raise ValueError("attestation subject does not bind the recipe source")
-        except Exception as exc:
+        except TrustMaterialUnavailableError:
+            return {
+                **report,
+                "status": "evidence-unavailable",
+                "failure": "Sigstore trust material is unavailable",
+            }, None
+        except OSError as exc:
+            return {
+                **report,
+                "status": "evidence-unavailable",
+                "failure": f"embedded bundle could not be read ({type(exc).__name__})",
+            }, None
+        except (
+            BundleVerificationError,
+            StatementError,
+            UnicodeDecodeError,
+            ValueError,
+        ) as exc:
             return {**report, "status": "invalid", "failure": str(exc)}, None
         identity = SignerIdentity(verified.identity, verified.issuer)
         return (
@@ -320,6 +342,9 @@ class SourceAttestationRequirement:
         elif any(item["status"] == "invalid" for item in bundles):
             status = "invalid"
             failure = "one or more embedded source attestations are invalid"
+        elif any(item["status"] == "evidence-unavailable" for item in bundles):
+            status = "evidence-unavailable"
+            failure = "source attestation verification could not run"
         elif len(matched) != len(self.publishers):
             status = "untrusted-identity"
             failure = "not every recipe publisher matched a verified bundle"
@@ -547,6 +572,7 @@ class EnvironmentAuditor:
         """Audit draft source evidence from the verified package archive."""
         from conda.common.serialize import yaml
         from conda_package_handling.api import extract
+        from ruamel.yaml import YAMLError
 
         if not package_verified or package_sha256 is None:
             return [
@@ -623,7 +649,24 @@ class EnvironmentAuditor:
                         rendered_recipe
                     )
                 ]
-        except Exception as exc:
+        except YAMLError:
+            return [
+                {
+                    "status": "invalid",
+                    "failure": "rendered recipe is not valid YAML",
+                    "verification_scope": "draft-source-attestation",
+                }
+            ]
+        except OSError as exc:
+            error_name = type(exc).__name__
+            return [
+                {
+                    "status": "evidence-unavailable",
+                    "failure": f"source evidence could not be read ({error_name})",
+                    "verification_scope": "draft-source-attestation",
+                }
+            ]
+        except (UnicodeDecodeError, ValueError) as exc:
             return [
                 {
                     "status": "invalid",
