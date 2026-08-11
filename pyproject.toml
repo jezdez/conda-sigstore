@@ -22,7 +22,13 @@ classifiers = [
   "Topic :: Software Development :: Build Tools",
   "Topic :: System :: Software Distribution",
 ]
-dependencies = ["rich>=13", "sigstore>=4.5,<5"]
+dependencies = [
+  # conda and conda-package-handling are supplied by the active conda environment.
+  "cryptography>=42",
+  "pyasn1~=0.6",
+  "rich>=13",
+  "sigstore>=4.5,<5",
+]
 description = "Create and verify Sigstore attestations for conda packages"
 dynamic = ["version"]
 keywords = ["conda", "in-toto", "plugin", "sigstore", "supply-chain-security"]

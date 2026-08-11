@@ -19777,6 +19777,8 @@ packages:
 - pypi: ./
   name: conda-sigstore
   requires_dist:
+  - cryptography>=42
+  - pyasn1~=0.6
   - rich>=13
   - sigstore>=4.5,<5
   requires_python: '>=3.10'
