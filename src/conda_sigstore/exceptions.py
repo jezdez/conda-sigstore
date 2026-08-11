@@ -2,6 +2,16 @@
 
 from __future__ import annotations
 
+from conda.exceptions import CondaError
+
+
+class CondaSigstoreError(CondaError):
+    """An expected conda-sigstore command failure."""
+
+    def __init__(self, message: str, *, code: str = "conda-sigstore") -> None:
+        super().__init__(message)
+        self.code = code
+
 
 class StatementError(ValueError):
     """An in-toto statement is malformed."""
@@ -33,6 +43,7 @@ class TrustMaterialUnavailableError(BundleVerificationError):
 
 __all__ = [
     "BundleVerificationError",
+    "CondaSigstoreError",
     "ProvenanceError",
     "PublishStatementError",
     "StatementError",

@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 import conda_sigstore.cli.audit as cli_audit
+from conda_sigstore.exceptions import CondaSigstoreError
 
 
 def test_audit_uses_explicit_prefix_sidecars(
@@ -99,3 +102,18 @@ def test_audit_human_output_uses_injected_console(
     assert "verified" in output
     assert "publisher@example.org" in output
     assert capsys.readouterr().out == ""
+
+
+def test_audit_reports_expected_configuration_failure(
+    monkeypatch, sigstore_parser
+) -> None:
+    class FailingAuditor:
+        @classmethod
+        def current(cls, *, transport):
+            raise ValueError("bad trust configuration")
+
+    monkeypatch.setattr(cli_audit, "EnvironmentAuditor", FailingAuditor)
+    args = sigstore_parser.parse_args(["audit"])
+
+    with pytest.raises(CondaSigstoreError, match="bad trust configuration"):
+        cli_audit.execute_audit(args)

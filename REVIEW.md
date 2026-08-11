@@ -10,7 +10,7 @@ This checklist records the full repository review completed on 2026-08-11. Each 
 
 - [x] 2. Make `targetChannel` validation conditional on the caller supplying an expected channel while retaining the explicit requirement mode.
 - [x] 3. Commit attestation output atomically without replacing a destination created during signing.
-- [ ] 4. Convert expected command failures to a dedicated `CondaError` while preserving transport failure codes and leaving programming errors visible.
+- [x] 4. Convert expected command failures to a dedicated `CondaError` while preserving transport failure codes and leaving programming errors visible.
 - [ ] 5. Detect an artifact that changes during direct verification.
 - [ ] 6. Require SHA-256 values to contain exactly 64 hexadecimal characters.
 - [ ] 7. Select only the exact retained package filename during audit.

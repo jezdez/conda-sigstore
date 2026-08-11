@@ -11,6 +11,7 @@ from rich.table import Table
 from rich.text import Text
 
 from ..audit import EnvironmentAuditor, resolve_prefix
+from ..exceptions import CondaSigstoreError, TransportError
 from .output import STATUS_STYLES, print_evidence, print_source_evidence
 
 if TYPE_CHECKING:
@@ -19,12 +20,17 @@ if TYPE_CHECKING:
 
 def execute_audit(args: Namespace, *, console: Console | None = None) -> int:
     """Audit installed package and optional source evidence."""
-    report = EnvironmentAuditor.current(
-        transport="prefix" if args.prefix_sidecars else "repodata"
-    ).audit_environment(
-        resolve_prefix(name=args.name, prefix=args.prefix),
-        include_sources=args.sources,
-    )
+    try:
+        report = EnvironmentAuditor.current(
+            transport="prefix" if args.prefix_sidecars else "repodata"
+        ).audit_environment(
+            resolve_prefix(name=args.name, prefix=args.prefix),
+            include_sources=args.sources,
+        )
+    except TransportError as exc:
+        raise CondaSigstoreError(str(exc), code=exc.code) from None
+    except (OSError, ValueError) as exc:
+        raise CondaSigstoreError(str(exc)) from None
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
     else:

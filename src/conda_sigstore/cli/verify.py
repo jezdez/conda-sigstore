@@ -7,11 +7,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from conda.base.context import context
-from conda.exceptions import CondaError
 from conda.models.channel import Channel
 from rich.console import Console
 from rich.text import Text
 
+from ..exceptions import CondaSigstoreError, TransportError
 from ..model import SignerIdentity
 from ..settings import SigstoreSettings
 from ..transport import SidecarTransport
@@ -26,26 +26,35 @@ def execute_verify(args: Namespace, *, console: Console | None = None) -> int:
     """Verify package binding and report the authenticated signer."""
     artifact = Path(args.artifact).expanduser()
     if not artifact.is_file():
-        raise CondaError(f"package does not exist: {artifact}")
+        raise CondaSigstoreError(f"package does not exist: {artifact}")
     if (args.cert_identity is None) != (args.cert_oidc_issuer is None):
-        raise CondaError("--cert-identity and --cert-oidc-issuer must be used together")
-    settings = SigstoreSettings.current()
-    channel = Channel(args.channel).base_url if args.channel else None
-    expected_signer = (
-        SignerIdentity(args.cert_identity, args.cert_oidc_issuer)
-        if args.cert_identity is not None
-        else None
-    )
-    result = verify_artifact(
-        artifact,
-        SidecarTransport(max_bytes=settings.max_sidecar_bytes).load_input(args.bundle),
-        verifier=SigstoreVerifier(
-            offline=context.offline,
-            trust_config=settings.trust_config,
-        ),
-        channel=channel,
-        expected_signer=expected_signer,
-    )
+        raise CondaSigstoreError(
+            "--cert-identity and --cert-oidc-issuer must be used together"
+        )
+    try:
+        settings = SigstoreSettings.current()
+        channel = Channel(args.channel).base_url if args.channel else None
+        expected_signer = (
+            SignerIdentity(args.cert_identity, args.cert_oidc_issuer)
+            if args.cert_identity is not None
+            else None
+        )
+        result = verify_artifact(
+            artifact,
+            SidecarTransport(max_bytes=settings.max_sidecar_bytes).load_input(
+                args.bundle
+            ),
+            verifier=SigstoreVerifier(
+                offline=context.offline,
+                trust_config=settings.trust_config,
+            ),
+            channel=channel,
+            expected_signer=expected_signer,
+        )
+    except TransportError as exc:
+        raise CondaSigstoreError(str(exc), code=exc.code) from None
+    except (OSError, ValueError) as exc:
+        raise CondaSigstoreError(str(exc)) from None
     if args.json:
         print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
     else:

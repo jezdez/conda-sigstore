@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 import conda_sigstore.cli.attest as cli_attest
+from conda_sigstore.exceptions import CondaSigstoreError
 
 
 def test_attest_uses_operational_trust_config(
@@ -48,3 +51,21 @@ def test_attest_uses_operational_trust_config(
     }
     assert rich_console.file.getvalue().strip() == str(output)
     assert capsys.readouterr().out == ""
+
+
+def test_attest_reports_expected_input_failure(monkeypatch, sigstore_parser) -> None:
+    def fail(*args, **kwargs):
+        raise ValueError("bad package")
+
+    monkeypatch.setattr(
+        cli_attest.SigstoreSettings,
+        "current",
+        classmethod(lambda cls: SimpleNamespace(trust_config=None)),
+    )
+    monkeypatch.setattr(cli_attest, "create_attestation", fail)
+    args = sigstore_parser.parse_args(
+        ["attest", "bad.conda", "--target-channel", "https://example.test"]
+    )
+
+    with pytest.raises(CondaSigstoreError, match="bad package"):
+        cli_attest.execute_attest(args)

@@ -4,9 +4,9 @@ import json
 from types import SimpleNamespace
 
 import pytest
-from conda.exceptions import CondaError
 
 import conda_sigstore.cli.verify as cli_verify
+from conda_sigstore.exceptions import CondaSigstoreError, TransportError
 from conda_sigstore.model import (
     AuthorizationStatus,
     Sidecar,
@@ -187,7 +187,38 @@ def test_verify_requires_identity_and_issuer_together(
     )
 
     with pytest.raises(
-        CondaError,
+        CondaSigstoreError,
         match="--cert-identity and --cert-oidc-issuer must be used together",
     ):
         cli_verify.execute_verify(args)
+
+
+def test_verify_preserves_transport_failure_code(
+    monkeypatch, tmp_path, sigstore_parser
+) -> None:
+    artifact = tmp_path / "demo-1-0.conda"
+    artifact.write_bytes(b"package")
+
+    class FailingSidecarTransport:
+        def __init__(self, *, max_bytes):
+            pass
+
+        def load_input(self, source):
+            raise TransportError("invalid-sidecar", "bundle is malformed")
+
+    monkeypatch.setattr(
+        cli_verify.SigstoreSettings,
+        "current",
+        classmethod(
+            lambda cls: SimpleNamespace(max_sidecar_bytes=1024, trust_config=None)
+        ),
+    )
+    monkeypatch.setattr(cli_verify, "SidecarTransport", FailingSidecarTransport)
+    args = sigstore_parser.parse_args(
+        ["verify", str(artifact), "--bundle", "bundle.json"]
+    )
+
+    with pytest.raises(CondaSigstoreError, match="bundle is malformed") as error:
+        cli_verify.execute_verify(args)
+
+    assert error.value.code == "invalid-sidecar"
