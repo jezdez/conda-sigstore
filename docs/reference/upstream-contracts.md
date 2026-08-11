@@ -4,10 +4,10 @@ The plugin signs, verifies, and audits evidence explicitly. It also registers a
 direct, opt-in package verifier against the unreleased API in conda/conda#16518.
 The verifier enforces evidence validity, not publisher authorization.
 
-## Package-record preservation
+## Optional package-record preservation
 
-Conda needs an optional opaque `attestations` mapping on `PackageRecord`. It
-must survive:
+The draft repodata transport benefits from an optional opaque `attestations`
+mapping on `PackageRecord`. When implemented, it must survive:
 
 - monolithic and sharded repodata
 - package-cache records
@@ -18,9 +18,11 @@ The libmamba bridge should preserve the mapping by exact artifact URL and
 filename. Conda package identity alone can collide across `.conda` and
 `.tar.bz2` artifacts.
 
-Preservation enables `conda sigstore audit` and the install verifier to discover
-the exact sidecar descriptor selected by repodata. Unknown fields are currently
-discarded in several paths.
+Preservation enables `conda sigstore audit` and the install verifier to use the
+exact sidecar descriptor selected by repodata. It is an optional strengthening,
+not an install-enforcement prerequisite. Without the field, strict installation
+uses the selected package URL to require the deterministic adjacent sidecar.
+Unknown fields are currently discarded in several paths.
 
 ## Channel sidecars
 
@@ -93,20 +95,16 @@ flat `plugins.conda_sigstore_enforce` setting is true. The standard environment
 override is `CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true`.
 
 When enabled, missing, unavailable, malformed, invalid, or nonmatching evidence
-fails closed. The verifier uses only repodata-advertised `.sigs` input and never
-falls back to Prefix.dev `.v0.sigs` sidecars.
+fails closed. A preserved repodata descriptor selects the integrity-pinned
+`.sigs` input. Without one, the verifier requires the deterministic adjacent
+`.v0.sigs` input. A present descriptor is authoritative, so descriptor,
+retrieval, size, or digest failure never falls back.
 
-PR #16518 does not preserve `PackageRecord.attestations`. Ordinary solved
-records therefore cannot currently pass enabled verification. The separate
-record-preservation contract described above must land before normal solves can
-supply the required descriptor.
-
-This verifier does not need publisher delegation merely to reject advertised
-evidence that is malformed, cryptographically invalid, or bound to different
-artifact bytes. Enabled evidence coverage also makes a missing descriptor a
-failure. That is not a claim that the channel authorized the
-signer. Rejecting a valid signer as unauthorized needs the separate delegation
-contract above.
+This verifier does not need publisher delegation merely to reject evidence that
+is missing, malformed, cryptographically invalid, or bound to different
+artifact bytes. That is not a claim that the channel authorized the signer.
+Rejecting a valid signer as unauthorized needs the separate delegation contract
+above.
 
 ## Publisher tooling
 
@@ -136,9 +134,10 @@ not assign a SLSA level.
 ## Compatibility contract
 
 Prefix `.v0.sigs` input remains explicit to verification and audit commands.
-The install verifier never probes for or consumes it. Repodata discovery must
-never probe a Prefix-specific name after a descriptor is missing, unavailable,
-or invalid. This keeps the downgrade boundary visible.
+The strict install verifier also requires that deterministic adjacent name when
+no repodata descriptor exists. Repodata discovery itself never probes. A
+present descriptor must be satisfied and cannot downgrade to the adjacent
+transport after an error.
 
 ## End-to-end conformance
 
@@ -151,19 +150,20 @@ The conda and channel integration must demonstrate that:
 
 1. valid, exact artifact-bound CEP 27 evidence succeeds
 2. artifact substitution fails before extraction
-3. sidecar substitution fails before parsing
-4. a missing descriptor fails without sidecar probing
-5. target-channel replay fails
-6. classic and libmamba solver paths cannot bypass verification
-7. local-file and explicit `MatchSpec` inputs fail closed
-8. retained archives and `--download-only` cannot bypass verification
-9. dry runs and remove-only transactions perform no package verification or
+3. descriptor-pinned sidecar substitution fails before parsing
+4. an absent descriptor selects required adjacent evidence
+5. a missing adjacent sidecar fails closed
+6. target-channel replay fails
+7. classic and libmamba solver paths cannot bypass verification
+8. local-file and unsupported explicit `MatchSpec` inputs fail closed
+9. retained archives and `--download-only` cannot bypass verification
+10. dry runs and remove-only transactions perform no package verification or
    prefix mutation
-10. force reinstalls reverify the incoming archive
-11. verification remains mandatory when `safety_checks` and transaction
+11. force reinstalls reverify the incoming archive
+12. verification remains mandatory when `safety_checks` and transaction
     rollback are disabled
-12. strict failure causes zero unlink or link actions
-13. package-controlled code or files are never processed before the decision
+13. strict failure causes zero unlink or link actions
+14. package-controlled code or files are never processed before the decision
 
 An unrelated but cryptographically valid Sigstore identity can satisfy this
 validity-only verifier. Authorization conformance requires a future delegation

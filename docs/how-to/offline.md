@@ -10,11 +10,11 @@ and trusted Sigstore material.
 Before disconnecting:
 
 1. Retain each package artifact and its SHA-256.
-2. Retain repodata containing each sidecar descriptor.
-3. Retain each advertised `.sigs` file alongside the package artifact.
-4. Provision a trusted Sigstore client configuration through an authenticated
+2. Run strict verification online once so an adjacent sidecar can be cached, or
+   retain repodata and each descriptor-advertised `.sigs` file.
+3. Provision a trusted Sigstore client configuration through an authenticated
    process if production TUF material will not already be cached.
-5. Verify representative artifacts with the same files and trust material that
+4. Verify representative artifacts with the same files and trust material that
    will be available offline.
 
 With `trust_config: null`, the verifier uses Sigstore's production trust
@@ -24,15 +24,19 @@ does not prove authenticated distribution, freshness, or rollback protection.
 
 ## Understand the sidecar cache
 
-A cached repodata sidecar is addressed and rechecked by SHA-256. It cannot
-substitute for retained artifact bytes or new cryptographic verification. An
-extracted-only package cache entry remains `record-digest-only`.
+A cached repodata sidecar is addressed and rechecked by SHA-256. A successfully
+verified adjacent sidecar is stored by content digest and referenced by the
+artifact SHA-256, credential-free channel, and filename. Both are
+cryptographically reverified when reused. Neither cache path substitutes for
+retained artifact bytes or a current verification decision. An extracted-only
+package cache entry remains `record-digest-only`.
+Online adjacent verification fetches the current sidecar instead of preferring
+the offline cache.
 
 `conda sigstore verify --bundle PATH` verifies the supplied file directly. It
-does not copy that file into the digest cache. The cache is populated only when
-the repodata transport loads a descriptor-selected sidecar. Released conda
-versions do not yet preserve that descriptor on package records, so keep local
-sidecar files instead of relying on an audit command to warm the cache.
+does not copy that file into the digest cache. Descriptor-selected sidecars are
+cached after their advertised digest is checked. Adjacent sidecars receive an
+artifact reference only after successful Sigstore and CEP 27 verification.
 
 ## Verify local inputs
 
@@ -53,10 +57,9 @@ conda sigstore audit -p /srv/conda/envs/runtime --json
 `--sources` inspects separate build or source evidence when retained package
 archives contain it. That evidence does not authorize the package publisher.
 
-Once conda preserves repodata descriptors, automatic offline lookup will be
-available only for `repodata` sidecars already stored under the advertised
-digest. Prefix `.v0.sigs` sidecars are unpinned Prefix.dev inputs and must be
-supplied explicitly.
+Strict installation can reuse a cached adjacent `.v0.sigs` sidecar offline by
+artifact SHA-256, channel, and filename. Missing cache data still fails closed
+and offline mode never attempts a network request.
 
 ## Plan trust-root updates
 

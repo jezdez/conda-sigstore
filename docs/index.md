@@ -12,7 +12,8 @@ It has four jobs:
 3. An operator audits an installed environment for available publication,
    provenance, and embedded source evidence.
 4. An operator may opt in to a draft pre-extraction verifier that requires
-   valid repodata-advertised CEP 27 evidence.
+   valid CEP 27 evidence from a descriptor-pinned or deterministic adjacent
+   sidecar.
 
 The plugin supports two sidecar transports:
 
@@ -91,14 +92,14 @@ requirement to one explicit verification. It does not discover channel
 publisher delegation.
 
 The plugin registers a direct package-verifier hook against the unreleased API
-in conda/conda#16518. It is disabled by default. When enabled, it fails closed
-unless a repodata-advertised sidecar contains valid CEP 27 evidence for the
-exact artifact. It does not use Prefix.dev sidecars and does not authorize the
-signer.
+in conda/conda#16518. It is disabled by default. When enabled, it uses a
+descriptor-pinned `.sigs` sidecar when advertised and otherwise requires the
+deterministic adjacent `.v0.sigs` sidecar. It fails closed before extraction
+and does not authorize the signer.
 
-PR #16518 does not yet preserve the repodata `attestations` descriptor on
-`PackageRecord`, so ordinary solved records cannot currently pass the enabled
-verifier. See [Installation verification across package managers](explanation/install-verification.md)
+The install path needs only the package URL and SHA-256 supplied by the draft
+hook, not a new `PackageRecord` field. See
+[Installation verification across package managers](explanation/install-verification.md)
 and [Upstream integration contracts](reference/upstream-contracts.md).
 
 ```{toctree}

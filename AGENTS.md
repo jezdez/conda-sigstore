@@ -23,12 +23,14 @@
     statements.
   - `attestation.py` owns keyless signing and raw bundle output.
   - `transport.py` owns `SidecarTransport`, including bounded local,
-    repodata-advertised `.sigs`, and Prefix.dev sidecar loading.
+    repodata-advertised `.sigs`, and deterministic adjacent Prefix.dev sidecar
+    loading.
   - `verification.py` owns Sigstore cryptographic verification followed by CEP
     27 and artifact-binding checks.
   - `install.py` owns the opt-in adapter for conda's pre-extraction
     package-verifier hook. It validates evidence and does not authorize signers.
-  - `cache.py` owns content-addressed sidecars.
+  - `cache.py` owns content-addressed sidecars and artifact-digest references
+    used only to rediscover adjacent evidence for fresh verification.
   - `audit.py` owns installed-environment and source-evidence audit orchestration.
   - `source_attestations.py` owns draft recipe declarations, embedded paths,
     bundle verification, and publisher matching.
@@ -44,6 +46,12 @@
 - Live external-service checks belong in `tests/test_interop.py`, use the
   `live_interop` marker, require explicit environment-variable gates, and stay
   excluded from normal pull request tests.
+
+- Performance checks belong in `tests/test_benchmarks.py`, use the `benchmark`
+  marker, and stay excluded from normal tests. Keep cryptographic benchmarks
+  hermetic and preserve machine-readable results without making noisy hosted
+  runner timing a correctness threshold. Live install comparisons also use the
+  `live_interop` marker and an explicit environment-variable gate.
 
 ## Imports and plugin startup
 
@@ -195,9 +203,9 @@
   enforcement false by default. The locked developer environments use
   `jezdez/conda` branch `feature/package-verifiers` from conda/conda#16518.
 
-- Do not claim ordinary solved installs can pass strict verification until conda
-  also preserves opaque `PackageRecord.attestations`. conda/conda#16518 adds the
-  hook but does not provide that separate record-preservation contract.
+- Install enforcement must not depend on conda preserving an optional repodata
+  attestation descriptor. The selected package URL and conda-supplied artifact
+  SHA-256 are sufficient to locate and bind required adjacent evidence.
 
 - Treat JSON as an output contract. Machine-readable output must contain one
   stable, unstyled JSON value on stdout and must not be mixed with human status
@@ -237,13 +245,16 @@
   as `conda/ceps#142` or the draft repodata transport.
 
 - The opt-in install verifier must require one cryptographically valid, exact
-  artifact-bound CEP 27 statement from the repodata-advertised sidecar.
-  Missing, unavailable, malformed, invalid, or nonmatching evidence must fail
-  the package. This does not authorize the signer.
+  artifact-bound CEP 27 statement. When repodata advertises a `.sigs`
+  descriptor, enforce its size and SHA-256 and never fall back after an error.
+  Otherwise require the deterministic adjacent `.v0.sigs` sidecar. Missing,
+  unavailable, malformed, invalid, or nonmatching evidence must fail the
+  package. This does not authorize the signer.
 
-- Keep Prefix.dev `.v0.sigs` support explicit through a direct bundle URL or
-  the `--prefix-sidecars` audit flag. The sidecar is not integrity-bound by
-  repodata. Never fall back to it from repodata mode.
+- Keep Prefix.dev `.v0.sigs` audit support explicit through a direct bundle URL
+  or the `--prefix-sidecars` flag. Strict install enforcement may require this
+  deterministic adjacent sidecar when no repodata descriptor exists. A
+  present but invalid descriptor is a hard failure, not a fallback trigger.
 
 - Bound bytes before JSON, certificate, archive, or bundle parsing. Require a
   nonempty sidecar array of bundle objects and reject duplicate JSON keys where
@@ -253,7 +264,10 @@
   verified result. Preserve invalid, unsupported, and nonmatching siblings as
   evidence without allowing them to overturn valid evidence.
 
-- Rehash cached sidecar bytes on every read.
+- Cache adjacent sidecars only after successful verification, bind their
+  content digest to the artifact SHA-256, credential-free channel, and
+  filename, and rehash and cryptographically reverify the bytes on every read.
+  This cache is not a verification receipt.
 
 - A local trust configuration that parses successfully is not proof of
   authenticated distribution, freshness, or rollback protection. Keep those

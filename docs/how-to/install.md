@@ -5,10 +5,9 @@ separate named environment does not register `conda sigstore` with the `conda`
 executable from base.
 
 :::{warning}
-The current source checkout requires the unreleased package-verifier API from
-[conda/conda#16518](https://github.com/conda/conda/pull/16518). The locked Pixi
-environments use `jezdez/conda` branch `feature/package-verifiers`. Do not
-install the checkout into a released conda environment.
+This preview requires the unreleased package-verifier API from
+[conda/conda#16518](https://github.com/conda/conda/pull/16518). No released
+conda version provides it yet.
 :::
 
 ## Install a release
@@ -18,6 +17,7 @@ Install pip and the plugin into conda's base environment:
 ```console
 conda install -n base pip
 conda run -n base python -m pip install conda-sigstore
+conda sigstore --help
 ```
 
 If `conda-pypi` is already installed with conda, use its target-environment
@@ -25,27 +25,15 @@ option before the install subcommand:
 
 ```console
 conda pypi -n base install conda-sigstore
-```
-
-The PyPI command becomes available with the first release. There is no
-published package yet.
-
-## Use a source checkout
-
-Before the first release, use the checkout's locked Pixi environment:
-
-```console
-pixi install --locked -e test
-pixi run --locked -e test conda sigstore --help
+conda sigstore --help
 ```
 
 ## Check plugin discovery
 
-Ask the compatible `conda` executable to load the plugin. From a source
-checkout, use the locked environment:
+Ask conda to load the installed plugin:
 
 ```console
-pixi run --locked -e test conda sigstore --help
+conda sigstore --help
 ```
 
 The help output lists `attest`, `verify`, and `audit`. The package-verifier hook

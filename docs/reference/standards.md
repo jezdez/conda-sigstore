@@ -56,7 +56,7 @@ more than one signer or countersignature without changing the package artifact.
 | `sigstore verify identity` | Verifies Sigstore material, an expected identity and issuer, and a matching in-toto subject digest | It does not enforce CEP 27's exact filename, single subject, predicate type, or target channel |
 | `conda sigstore attest` | Uses sigstore-python to DSSE-sign one strict CEP 27 statement | It creates evidence but does not upload it |
 | `conda sigstore verify` | Verifies Sigstore material, artifact binding, the full CEP 27 statement contract, and an optional exact signer requirement | It cannot discover a channel's publisher delegation |
-| opt-in conda package verifier | Requires valid CEP 27 evidence from the repodata-advertised sidecar before extraction | It does not use Prefix.dev sidecars or authorize the signer |
+| opt-in conda package verifier | Requires valid CEP 27 evidence from a descriptor-pinned or deterministic adjacent sidecar before extraction | It validates evidence but does not authorize the signer |
 | Rattler-Build `--generate-attestation` | Creates one CEP 27 bundle per package and uploads it through Prefix Trusted Publishing | This is a Prefix-specific producer path |
 | `actions/attest` | Creates a custom Sigstore-backed in-toto attestation and stores it in GitHub | `subject-path` must resolve to one package for CEP 27 |
 | `gh attestation verify` | Retrieves GitHub-hosted evidence and applies GitHub owner and predicate criteria | It is not a replacement for CEP 27 target-channel validation |
@@ -108,8 +108,10 @@ Existing Prefix channels do not advertise the sidecar hash and size in
 repodata.
 
 Explicit `.v0.sigs` input preserves interoperability while making the weaker
-discovery and integrity model visible. Repodata discovery never falls back to
-it.
+discovery and integrity model visible. Strict install enforcement also requires
+this deterministic adjacent input when repodata has no descriptor. A present
+descriptor selects `.sigs` and any descriptor or retrieval failure remains
+fatal instead of falling back.
 
 The pinned public client paths are documented in
 [Publish attestations to Prefix.dev](../how-to/publish-prefix.md). They do not
@@ -130,8 +132,7 @@ authorize a publication signer.
 
 Generic SLSA Provenance v1 does not designate the first
 `resolvedDependencies` entry as the source. The plugin reports all materials as
-stated and leaves the source field unavailable unless a future build-type
-adapter defines that mapping.
+stated without guessing which one represents the source.
 
 Converted PEP 740 or PyPI bundles without canonical Rekor entries are reported
 as invalid. The draft source index does not carry authenticated conversion

@@ -87,7 +87,6 @@ Provenance v1, it contains `subjects` and this `provenance` object:
   "builder": "https://example.org/builder",
   "build_type": "https://example.org/build/v1",
   "invocation": "run-1",
-  "source": null,
   "materials": [
     {
       "uri": "git+https://example.org/project",
@@ -101,7 +100,7 @@ Provenance v1, it contains `subjects` and this `provenance` object:
 }
 ```
 
-`invocation`, `source`, `started_on`, and `finished_on` may be `null`.
+`invocation`, `started_on`, and `finished_on` may be `null`.
 `subjects` is the statement's array of `{name, digest}` objects. The plugin
 reports all provenance materials and does not assign a SLSA level.
 

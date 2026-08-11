@@ -156,8 +156,9 @@ conda sigstore verify ./example-1.0-0.conda \
 
 The result verifies the package binding and reports the actual certificate
 identity and issuer. It labels no signer as authorized. The `.v0.sigs` bytes
-are not pinned by repodata, so keep this transport explicit and do not use it
-as fallback after a draft repodata descriptor failure.
+are not pinned by repodata. Direct verification selects this transport
+explicitly. Strict installation requires it only when no descriptor exists and
+never uses it after a draft repodata descriptor failure.
 
 For the transport limitation and live fixture, see
 [Verify Prefix.dev sidecars](prefix-sidecars.md).

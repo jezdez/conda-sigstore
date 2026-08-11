@@ -34,7 +34,7 @@ unavailable evidence before parsing.
 
 | Setting | Type | Default | Meaning |
 | --- | --- | --- | --- |
-| `plugins.conda_sigstore_enforce` | boolean | `false` | Require valid repodata-advertised CEP 27 evidence before package extraction |
+| `plugins.conda_sigstore_enforce` | boolean | `false` | Require valid CEP 27 evidence from a descriptor-pinned or deterministic adjacent sidecar before package extraction |
 
 Conda also accepts the standard environment-variable override:
 
@@ -45,13 +45,13 @@ CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true conda install PACKAGE
 The hook is registered directly against the unreleased API in
 [conda/conda#16518](https://github.com/conda/conda/pull/16518). It is not an
 optional compatibility hook. When enabled, missing, unavailable, malformed,
-invalid, or nonmatching evidence fails the package. Only the draft
-repodata-advertised `.sigs` transport is accepted. Prefix.dev `.v0.sigs` is not
-a fallback.
+invalid, or nonmatching evidence fails the package. A repodata descriptor
+selects the integrity-pinned `.sigs` transport. Without one, the verifier
+requires the deterministic adjacent `.v0.sigs` sidecar. A present but invalid
+descriptor never falls back.
 
-PR #16518 does not preserve the repodata `attestations` descriptor on
-`PackageRecord`. Ordinary solved records therefore cannot currently pass the
-enabled verifier until a separate upstream preservation change lands.
+The hook supplies the selected package URL and SHA-256, so enabled verification
+does not depend on a new `PackageRecord` field.
 
 Publisher authorization is not configured by this plugin. CEP 27 does not
 standardize how conda channels distribute publisher delegation. The `verify`

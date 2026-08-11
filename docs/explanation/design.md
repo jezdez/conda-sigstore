@@ -66,12 +66,14 @@ service against a valid sibling. A malformed sidecar container still fails.
 
 The plugin registers a direct package-verifier hook against the unreleased API
 in conda/conda#16518. The flat `plugins.conda_sigstore_enforce` setting is false
-by default. When enabled, the verifier requires repodata-advertised evidence and
-fails closed before extraction. It does not consume Prefix.dev sidecars.
+by default. When enabled, the verifier uses a descriptor-pinned `.sigs`
+sidecar when advertised and otherwise requires the deterministic adjacent
+`.v0.sigs` sidecar. Every failure blocks extraction.
 
-This boundary validates evidence, not publisher authorization. PR #16518 also
-does not preserve the repodata `attestations` descriptor on `PackageRecord`, so
-ordinary solved records cannot currently pass the enabled verifier. See
+This boundary validates evidence, not publisher authorization. The selected
+package URL and SHA-256 supplied by the hook are sufficient for adjacent
+discovery and artifact binding, so install verification does not require conda
+to preserve a new repodata field. See
 [Installation verification across package managers](install-verification.md)
 and [Upstream integration contracts](../reference/upstream-contracts.md).
 
@@ -86,14 +88,19 @@ implementation calls this mode `repodata`.
 
 Prefix.dev compatibility mode uses only the `.v0.sigs` naming convention. It
 can verify the bundle and artifact binding but cannot bind the selected
-sidecar bytes to repodata. It remains explicit and is never an automatic
-fallback.
+sidecar bytes to repodata. Audit selects it explicitly. Strict installation
+also requires it when no descriptor exists because the enabled setting already
+requires evidence for every selected package. A present descriptor remains
+authoritative and any failure is fatal.
 
 ## Cache design
 
 Repodata-advertised sidecar bytes are content-addressed and rehashed on every
-read. An extracted-only package cache entry cannot satisfy an audit that needs
-to hash the original archive bytes.
+read. A successfully verified adjacent sidecar is cached by content digest and
+referenced by artifact SHA-256, credential-free channel, and filename. Cached
+evidence is cryptographically reverified and is never reused as a verdict. An
+extracted-only package cache entry cannot satisfy an audit that needs to hash
+the original archive bytes.
 
 ## Separate evidence classes
 

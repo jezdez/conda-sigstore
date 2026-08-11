@@ -19,8 +19,9 @@ https://prefix.dev/sigstore-example/linux-64/signed-package-2.1.0-hb0f4dca_0.con
 https://prefix.dev/sigstore-example/linux-64/signed-package-2.1.0-hb0f4dca_0.conda.v0.sigs
 ```
 
-The test pins both response digests, then verifies the CEP 27 statement with
-Sigstore's production trust root.
+The scheduled test enables strict verification, creates an environment from the
+fixed package, then audits it and checks the exact artifact digest, sidecar
+digest, signer, issuer, predicate, and transport label.
 
 ## Verify a Prefix.dev sidecar explicitly
 
@@ -39,6 +40,24 @@ that the signer was authorized by Prefix.dev. JSON output sets
 `prefix_sidecar` to `true` so downstream reports retain the transport
 distinction.
 
+## Require evidence during installation
+
+Enable strict installation verification for one command:
+
+```console
+CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true conda create \
+  -n verified \
+  --override-channels \
+  -c https://prefix.dev/sigstore-example \
+  signed-package=2.1.0=hb0f4dca_0
+```
+
+When the selected package record has no repodata attestation descriptor, the
+verifier requires `<artifact>.v0.sigs`. A missing, unavailable, malformed,
+invalid, or nonmatching sidecar blocks extraction. When a descriptor is
+present, its `.sigs` sidecar is authoritative and any error fails without
+falling back.
+
 ## Understand the weaker transport guarantee
 
 The signed statement binds the package bytes, but repodata does not commit to
@@ -54,11 +73,12 @@ bundle signer with the upload identity. Public information does not establish
 whether Prefix.dev's server makes that comparison. Treat signer-to-uploader
 matching as unknown.
 
-## Avoid silent fallback
+## Keep descriptor failures fatal
 
-Do not probe `.v0.sigs` after a missing or invalid repodata-advertised `.sigs`
-descriptor. That turns descriptor stripping into a downgrade. Prefix.dev
-sidecar discovery must remain an explicit user action.
+An absent descriptor and a broken descriptor are different states. Strict mode
+uses the deterministic adjacent sidecar only when the descriptor is absent. It
+never probes `.v0.sigs` after an advertised `.sigs` sidecar fails retrieval,
+size, digest, parsing, or verification checks.
 
 Read [Standards and formats](../reference/standards.md) for the draft
 integrity-bound `.sigs` format and

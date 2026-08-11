@@ -31,19 +31,19 @@ For one process, use conda's environment-variable form instead:
 CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true conda install PACKAGE
 ```
 
-When enabled, the verifier requires a repodata `attestations` descriptor,
-fetches only the descriptor-selected `.sigs` sidecar, and fails closed for
-missing, unavailable, malformed, invalid, or nonmatching evidence. It never
-probes for a sidecar and never falls back to Prefix.dev `.v0.sigs` input.
+When enabled, the verifier uses a repodata `attestations` descriptor and its
+integrity-pinned `.sigs` sidecar when available. Without a descriptor, it
+requires the deterministic adjacent `.v0.sigs` sidecar. Missing, unavailable,
+malformed, invalid, or nonmatching evidence fails closed. A present but broken
+descriptor never falls back.
 
 :::{warning}
 This is an integration preview. It requires the unreleased conda API in
 [conda/conda#16518](https://github.com/conda/conda/pull/16518), provided by the
 locked developer environments through `jezdez/conda` branch
-`feature/package-verifiers`. PR #16518 does not preserve the repodata
-`attestations` descriptor on `PackageRecord`. Ordinary solved records therefore
-cannot currently pass when enforcement is enabled. A separate upstream change
-must add that preservation.
+`feature/package-verifiers`. The selected package URL and SHA-256 from that
+hook are sufficient for adjacent-sidecar verification, so no separate repodata
+field-preservation change is required.
 :::
 
 The verifier establishes that valid evidence binds the exact package. It does

@@ -12,8 +12,9 @@ to publish a package.
 | --- | --- | --- |
 | pip | Checks an index-advertised download hash for corruption. `--require-hashes` requires locally supplied hashes for all resolved requirements. | None. PyPI documents a separate `pypi-attestations verify pypi` command for consumer verification. |
 | uv | Records selected index hashes in `uv.lock` and verifies hashes supplied in requirements files. `--require-hashes` requires complete hash coverage. | None. `uv publish` discovers and uploads adjacent PEP 740 attestations, but does not generate them or verify them during installation. |
+| npm | Uses `package-lock.json` to select exact dependency versions and records Subresource Integrity values for downloaded artifacts. | None. `npm audit signatures` is a separate command that verifies registry signatures and available provenance attestations after dependencies are installed. |
 | Pixi | Verifies conda and PyPI package checksums recorded in `pixi.lock` when an artifact is installed or reused from cache. | None. Pixi creates or uploads Sigstore attestations for Prefix.dev publishing and documents external consumer verification with `gh` or `cosign`. |
-| conda with conda-sigstore | Conda retains its package digest checks. | An opt-in direct package verifier requires valid repodata-advertised CEP 27 evidence. It is an integration preview against conda/conda#16518. |
+| conda with conda-sigstore | Conda retains its package digest checks. | An opt-in direct package verifier requires valid CEP 27 evidence from a descriptor-pinned or deterministic adjacent sidecar. It is an integration preview against conda/conda#16518. |
 
 The relevant primary documentation is:
 
@@ -21,6 +22,9 @@ The relevant primary documentation is:
 - [PyPI consuming attestations](https://docs.pypi.org/attestations/consuming-attestations/)
 - [uv package publishing](https://docs.astral.sh/uv/guides/package/#uploading-attestations-with-your-package)
 - [uv package-index hashes](https://docs.astral.sh/uv/concepts/indexes/#requiring-a-hash-algorithm)
+- [npm package-lock format](https://docs.npmjs.com/cli/configuring-npm/package-lock-json/)
+- [npm registry signature verification](https://docs.npmjs.com/verifying-registry-signatures/)
+- [npm provenance verification](https://docs.npmjs.com/generating-provenance-statements/#verifying-provenance-attestations)
 - [Pixi supply-chain security](https://github.com/prefix-dev/pixi/blob/b91a274c9db6d8ca3586bc763f04354e927d971d/docs/security.md)
 - [Pixi Prefix.dev upload options](https://github.com/prefix-dev/pixi/blob/b91a274c9db6d8ca3586bc763f04354e927d971d/docs/reference/cli/pixi/upload/prefix.md)
 
@@ -36,6 +40,14 @@ adjacent PEP 740 JSON objects to a supporting index. Its
 notes that it does not validate the interior attestation structure beyond JSON
 before upload. This is transport behavior, not consumer verification.
 
+npm also separates installation from signature and provenance verification.
+`npm audit signatures` runs after `npm install` or `npm ci`, checks registry
+signatures and available provenance attestations, and reports an error when a
+registry that advertises signing keys omits or provides an invalid signature.
+It verifies provenance when present rather than requiring every package to
+carry it. It does not expose a consumer-managed identity policy or a reusable
+verification receipt.
+
 Pixi checks locked artifact digests during installation. Its Sigstore path is
 separate and producer-oriented. `pixi publish --generate-attestation` and
 `pixi upload prefix --generate-attestation` create and upload evidence for
@@ -48,6 +60,26 @@ independent trust input. `conda sigstore verify` offers the corresponding
 low-level choice through paired `--cert-identity` and
 `--cert-oidc-issuer` options. They apply to one command and do not create
 channel policy.
+
+## Why enforcement has one switch
+
+The plugin keeps installation enforcement either disabled or fail-closed.
+`conda sigstore audit` is the nonblocking way to measure evidence coverage
+before enabling enforcement. An `ignore` mode would duplicate the disabled
+state, while a `warn` mode inside installation would duplicate the audit
+workflow and make invalid evidence easy to overlook.
+
+A client-maintained policy language would not establish who a channel
+authorized to publish. That information needs to come from a standardized
+channel delegation, like PyPI's Trusted Publisher relationship, rather than a
+new `.condarc` identity allowlist.
+
+Verification reports are output, not reusable trust decisions. Trust material,
+transparency evidence, and verifier behavior can change between commands. This
+matches pip's treatment of its
+[installation report](https://pip.pypa.io/en/latest/reference/installation-report/),
+which is not accepted as install input. The plugin therefore verifies evidence
+fresh instead of caching receipts.
 
 ## What the opt-in install verifier checks
 
@@ -65,17 +97,19 @@ opt-in install verifier. It does not invent the second part. CEP 27 defines the
 signed publication statement, but no accepted conda standard currently
 distributes channel publisher delegation to clients.
 
-The verifier uses only a repodata `attestations` descriptor preserved on
-the selected `PackageRecord`. It fetches `<artifact>.sigs`, validates the
-advertised size and SHA-256 before parsing, verifies the Sigstore material, and
-requires at least one strict CEP 27 statement for the exact artifact filename
-and SHA-256. An included target-channel claim must match the selected channel.
+When the selected `PackageRecord` carries a repodata `attestations` descriptor,
+the verifier fetches `<artifact>.sigs` and validates the advertised size and
+SHA-256 before parsing. Without a descriptor, strict mode derives and requires
+the adjacent `<artifact>.v0.sigs` sidecar. A present descriptor is authoritative
+and any descriptor, retrieval, or integrity error fails without falling back.
+
+Both paths verify the Sigstore material and require at least one strict CEP 27
+statement for the exact artifact filename and SHA-256. An included
+target-channel claim must match the selected channel.
 
 Missing, unavailable, malformed, invalid, or nonmatching evidence fails closed.
-A `MatchSpec` also fails because it does not carry a repodata
-descriptor. That includes local files and explicit URLs which cannot prove
-which channel metadata selected their evidence. The verifier never probes
-for a sidecar or uses Prefix.dev `.v0.sigs` compatibility input.
+A local-file `MatchSpec` also fails because it has no authenticated HTTP channel
+from which to retrieve adjacent evidence.
 
 Enable it with the flat setting or conda's standard environment override:
 
@@ -98,17 +132,10 @@ pre-extraction verifier boundary. This repository's locked developer
 environments use `jezdez/conda` branch `feature/package-verifiers`. No released
 conda version provides that API yet.
 
-One separate conda change remains:
-
-- preserve the opaque repodata `attestations` mapping on `PackageRecord` through
-  solver, cache, and prefix record paths
-
-PR #16518 does not provide that preservation. Ordinary solved records therefore
-reach the verifier without their descriptor and cannot currently pass when
-enforcement is enabled. Once preservation lands, the hook boundary rejects an
-archive before its extraction and before prefix unlink or link actions. Other
-package archives can already have completed cache extraction because those
-operations run concurrently.
+No separate `PackageRecord.attestations` preservation change is required for
+the adjacent path. The hook boundary rejects an archive before its extraction
+and before prefix unlink or link actions. Other package archives can already
+have completed cache extraction because those operations run concurrently.
 
 Rejecting a cryptographically valid signer as unauthorized still requires a
 standardized channel delegation that identifies authorized publishers.

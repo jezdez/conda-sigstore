@@ -96,11 +96,9 @@ API in conda/conda#16518. It yields no verifier unless
 `plugins.conda_sigstore_enforce` is true. The standard environment override is
 `CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true`.
 
-Enabled verification requires a repodata-advertised `.sigs` descriptor and
-fails closed for missing, unavailable, malformed, invalid, or nonmatching
-evidence. It never falls back to Prefix.dev `.v0.sigs` sidecars. The verifier
-establishes evidence validity but does not authorize the signer.
-
-PR #16518 does not preserve `PackageRecord.attestations`, so ordinary solved
-records cannot currently pass enabled verification. See
+Enabled verification uses descriptor-pinned `.sigs` evidence when advertised
+and otherwise requires the deterministic adjacent `.v0.sigs` sidecar. Missing,
+unavailable, malformed, invalid, or nonmatching evidence fails closed. A
+present but broken descriptor never falls back. The verifier establishes
+evidence validity but does not authorize the signer. See
 [Upstream integration contracts](upstream-contracts.md).
