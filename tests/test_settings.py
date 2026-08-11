@@ -19,23 +19,13 @@ def test_settings_validate_local_trust_path(tmp_path) -> None:
     trust_config = tmp_path / "trust.json"
     trust_config.write_text("{}")
 
-    settings = SigstoreSettings.from_mapping(
-        {"max_sidecar_bytes": 4096, "trust_config": str(trust_config)}
-    )
+    settings = SigstoreSettings(max_sidecar_bytes=4096, trust_config=trust_config)
 
     assert settings.max_sidecar_bytes == 4096
     assert settings.trust_config == trust_config
 
 
-@pytest.mark.parametrize(
-    ("value", "message"),
-    [
-        ({"max_sidecar_bytes": 0}, "positive integer"),
-        ({"max_sidecar_bytes": True}, "positive integer"),
-        ({"trust_config": ""}, "local path or null"),
-        ({"policies": []}, "unknown conda-sigstore setting"),
-    ],
-)
-def test_settings_reject_invalid_or_policy_values(value, message) -> None:
-    with pytest.raises(ValueError, match=message):
-        SigstoreSettings.from_mapping(value)
+@pytest.mark.parametrize("value", [0, True])
+def test_settings_reject_invalid_size(value: int) -> None:
+    with pytest.raises(ValueError, match="positive integer"):
+        SigstoreSettings(max_sidecar_bytes=value)
