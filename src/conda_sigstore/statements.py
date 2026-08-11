@@ -268,7 +268,7 @@ class PublishStatement:
             self.validate_target_channel(channel)
             for channel in accepted_target_channels
         )
-        if self.target_channel not in accepted:
+        if accepted and self.target_channel not in accepted:
             raise PublishStatementError(
                 f"targetChannel {self.target_channel!r} does not match "
                 "the supplied channel"

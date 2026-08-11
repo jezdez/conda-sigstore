@@ -79,6 +79,18 @@ def test_target_channel_must_be_explicitly_allowed() -> None:
         )
 
 
+def test_target_channel_is_reported_without_an_expected_channel() -> None:
+    statement = PublishStatement(FILENAME, DIGEST, CHANNEL)
+
+    assert (
+        statement.bind(
+            expected_filename=FILENAME,
+            expected_sha256=DIGEST,
+        )
+        == statement
+    )
+
+
 def test_statement_model_normalizes_target_channel() -> None:
     statement = PublishStatement(
         FILENAME,
