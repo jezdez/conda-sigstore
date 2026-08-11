@@ -1,0 +1,34 @@
+name: Bug report
+description: Report a reproducible conda-sigstore defect
+title: ""
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not disclose vulnerabilities here. Follow SECURITY.md instead.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Include the smallest safe sequence of commands and configuration.
+    validations:
+      required: true
+  - type: input
+    id: conda
+    attributes:
+      label: conda version
+    validations:
+      required: true
+  - type: input
+    id: plugin
+    attributes:
+      label: conda-sigstore version
+    validations:
+      required: true

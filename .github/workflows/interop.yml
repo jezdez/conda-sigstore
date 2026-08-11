@@ -1,0 +1,38 @@
+name: Live interoperability
+
+on:
+  schedule:
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  interop:
+    name: Prefix and Sigstore staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write # Needed for the Sigstore staging signing identity
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@a09b6247153796b190642a2b53fac4241043cf6f # v0.10.0
+        with:
+          pixi-version: v0.76.1
+          environments: test
+          cache: true
+      - name: Run live interoperability tests
+        run: pixi run --locked -e test test-interop
+        env:
+          CONDA_SIGSTORE_PREFIX_INTEROP: "1"
+          CONDA_SIGSTORE_STAGING_INTEROP: "1"
+          CONDA_SIGSTORE_STAGING_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/interop.yml@${{ github.ref }}

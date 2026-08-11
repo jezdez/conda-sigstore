@@ -1,0 +1,501 @@
+"""Sigstore verification followed by application-specific statement checks."""
+
+from __future__ import annotations
+
+import hashlib
+import hmac
+import importlib.metadata
+import json
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from threading import Lock
+from typing import TYPE_CHECKING, Protocol
+
+from .exceptions import (
+    BundleVerificationError,
+    PublishStatementError,
+    StatementError,
+    TrustMaterialUnavailableError,
+)
+from .model import (
+    AuthorizationStatus,
+    SignerIdentity,
+    VerificationFailure,
+    VerificationResult,
+    VerificationStatus,
+    VerifiedEvidence,
+)
+from .provenance import SlsaProvenance
+from .statements import InTotoStatement, PublishStatement
+
+if TYPE_CHECKING:
+    from pathlib import Path
+    from typing import Any
+
+    from .model import Sidecar
+
+
+@dataclass(frozen=True, slots=True)
+class CryptographicVerification:
+    payload_type: str
+    payload: bytes
+    identity: str
+    issuer: str
+    timestamps: tuple[str, ...] = ()
+
+
+class BundleVerifier(Protocol):
+    def verify(self, bundle_json: str) -> CryptographicVerification:
+        """Cryptographically verify one bundle and return its actual identity."""
+
+
+@dataclass(frozen=True, slots=True)
+class SigstoreBundleMaterial:
+    """A parsed Sigstore bundle and its authenticated certificate evidence."""
+
+    bundle: Any
+    serialized: str
+
+    @classmethod
+    def from_json(cls, bundle_json: str | bytes) -> SigstoreBundleMaterial:
+        """Parse one bundle without weakening Sigstore media-type validation."""
+        from sigstore.models import Bundle  # type: ignore[import-not-found]
+
+        try:
+            serialized = (
+                bundle_json.decode("utf-8")
+                if isinstance(bundle_json, bytes)
+                else bundle_json
+            )
+            return cls(Bundle.from_json(serialized), serialized)
+        except Exception as exc:
+            raise BundleVerificationError(str(exc)) from exc
+
+    def signer(self) -> SignerIdentity:
+        """Return the exact SAN and OIDC issuer carried by the certificate."""
+        from cryptography.x509 import (  # type: ignore[import-not-found]
+            ObjectIdentifier,
+            OtherName,
+            RFC822Name,
+            SubjectAlternativeName,
+            UniformResourceIdentifier,
+        )
+        from cryptography.x509.extensions import (
+            ExtensionNotFound,  # type: ignore[import-not-found]
+        )
+        from pyasn1.codec.der.decoder import (
+            decode as der_decode,  # type: ignore[import-not-found]
+        )
+        from pyasn1.type.char import UTF8String  # type: ignore[import-not-found]
+
+        certificate = self.bundle.signing_certificate
+        extensions = certificate.extensions
+        values = extensions.get_extension_for_class(SubjectAlternativeName).value
+        identities = list(values.get_values_for_type(RFC822Name))
+        identities.extend(values.get_values_for_type(UniformResourceIdentifier))
+        for other_name in values.get_values_for_type(OtherName):
+            if other_name.type_id.dotted_string != "1.3.6.1.4.1.57264.1.7":
+                continue
+            try:
+                identities.append(der_decode(other_name.value, UTF8String)[0].decode())
+            except Exception:
+                continue
+        identities = list(dict.fromkeys(identities))
+        if len(identities) != 1:
+            raise BundleVerificationError(
+                "certificate must contain exactly one supported SAN, "
+                f"found {len(identities)}"
+            )
+
+        issuer_v1 = ObjectIdentifier("1.3.6.1.4.1.57264.1.1")
+        issuer_v2 = ObjectIdentifier("1.3.6.1.4.1.57264.1.8")
+        try:
+            issuer = extensions.get_extension_for_oid(issuer_v1).value.value.decode()
+        except ExtensionNotFound:
+            try:
+                raw = extensions.get_extension_for_oid(issuer_v2).value.value
+                issuer = der_decode(raw, UTF8String)[0].decode()
+            except ExtensionNotFound as exc:
+                raise BundleVerificationError(
+                    "certificate does not contain an OIDC issuer"
+                ) from exc
+            except Exception as exc:
+                raise BundleVerificationError(
+                    "certificate has a malformed OIDC issuer"
+                ) from exc
+        except (AttributeError, UnicodeDecodeError) as exc:
+            raise BundleVerificationError(
+                "certificate has a malformed OIDC issuer"
+            ) from exc
+        return SignerIdentity(identities[0], issuer)
+
+    def timestamps(self) -> tuple[str, ...]:
+        """Report timestamps from already-verified Sigstore material."""
+        try:
+            value = json.loads(self.serialized)
+            entries = value["verificationMaterial"]["tlogEntries"]
+        except (KeyError, TypeError, json.JSONDecodeError):
+            entries = ()
+        result: list[str] = []
+        for entry in entries:
+            try:
+                timestamp = int(entry["integratedTime"])
+                result.append(
+                    datetime.fromtimestamp(timestamp, timezone.utc)
+                    .isoformat()
+                    .replace("+00:00", "Z")
+                )
+            except (KeyError, TypeError, ValueError, OSError):
+                continue
+
+        try:
+            timestamp_data = (
+                self.bundle.verification_material.timestamp_verification_data
+            )
+            rfc3161_timestamps = (
+                timestamp_data.rfc3161_timestamps if timestamp_data is not None else ()
+            )
+        except Exception:
+            rfc3161_timestamps = ()
+        for response in rfc3161_timestamps:
+            try:
+                generated = response.tst_info.gen_time
+                if not isinstance(generated, datetime):
+                    continue
+                if generated.tzinfo is None:
+                    generated = generated.replace(tzinfo=timezone.utc)
+                result.append(
+                    generated.astimezone(timezone.utc)
+                    .isoformat()
+                    .replace("+00:00", "Z")
+                )
+            except Exception:
+                continue
+        return tuple(dict.fromkeys(result))
+
+
+class SigstoreVerifier:
+    """Lazy adapter around sigstore-python 4.5's public verification API."""
+
+    def __init__(
+        self,
+        *,
+        offline: bool = False,
+        trust_config: Path | None = None,
+        verifier: object | None = None,
+    ) -> None:
+        self.offline = offline
+        self.trust_config = trust_config
+        self._verifier = verifier
+        self._trust_model: Any | None = None
+        self._trust_root_identity: str | None = None
+        self._initialization_lock = Lock()
+
+    @property
+    def trust_root_identity(self) -> str:
+        if self._trust_root_identity is None:
+            if self._verifier is not None and self._trust_model is None:
+                return (
+                    f"injected:{type(self._verifier).__module__}."
+                    f"{type(self._verifier).__qualname__}:{id(self._verifier)}"
+                )
+            self.trust_model
+        assert self._trust_root_identity is not None
+        return self._trust_root_identity
+
+    @property
+    def verifier_version(self) -> str:
+        versions = []
+        for distribution in ("conda-sigstore", "sigstore"):
+            try:
+                version = importlib.metadata.version(distribution)
+            except importlib.metadata.PackageNotFoundError:
+                version = "unknown"
+            versions.append(f"{distribution}={version}")
+        return "|".join(versions)
+
+    @property
+    def trust_model(self) -> Any:
+        """Load and retain the configured Sigstore client trust model."""
+        if self._trust_model is not None:
+            return self._trust_model
+        with self._initialization_lock:
+            if self._trust_model is None:
+                from sigstore.models import (  # type: ignore[import-not-found]
+                    ClientTrustConfig,
+                )
+
+                if self.trust_config is None:
+                    config = ClientTrustConfig.production(offline=self.offline)
+                else:
+                    config = ClientTrustConfig.from_json(self.trust_config.read_text())
+                root_json = config._inner.trusted_root.to_json().encode()
+                self._trust_root_identity = (
+                    f"sha256:{hashlib.sha256(root_json).hexdigest()}"
+                )
+                self._trust_model = config
+        return self._trust_model
+
+    def verify(self, bundle_json: str) -> CryptographicVerification:
+        from sigstore.verify.policy import Identity  # type: ignore[import-not-found]
+
+        material = SigstoreBundleMaterial.from_json(bundle_json)
+        actual_identity = material.signer()
+        identity_policy = Identity(
+            identity=actual_identity.identity,
+            issuer=actual_identity.issuer,
+        )
+        try:
+            if self._verifier is None:
+                from sigstore.verify import Verifier  # type: ignore[import-not-found]
+
+                trusted_root = self.trust_model.trusted_root
+                with self._initialization_lock:
+                    if self._verifier is None:
+                        self._verifier = Verifier(trusted_root=trusted_root)
+            verifier: Any = self._verifier
+        except Exception as exc:
+            raise TrustMaterialUnavailableError(
+                "Sigstore trust material is unavailable"
+            ) from exc
+        try:
+            payload_type, payload = verifier.verify_dsse(
+                material.bundle,
+                identity_policy,
+            )
+        except Exception as exc:
+            raise BundleVerificationError(str(exc)) from exc
+        return CryptographicVerification(
+            payload_type=payload_type,
+            payload=payload,
+            identity=actual_identity.identity,
+            issuer=actual_identity.issuer,
+            timestamps=material.timestamps(),
+        )
+
+
+def verify_bundles(
+    sidecar: Sidecar,
+    *,
+    artifact_name: str,
+    artifact_sha256: str,
+    verifier: BundleVerifier | None = None,
+    channel: str | None = None,
+    expected_signer: SignerIdentity | None = None,
+) -> VerificationResult:
+    """Verify package binding when one CEP 27 statement succeeds."""
+    bundle_verifier = verifier or SigstoreVerifier()
+    evidence: list[VerifiedEvidence] = []
+    failures: list[VerificationFailure] = []
+    package_verified = False
+    saw_unavailable = False
+    saw_untrusted_publish = False
+
+    for index, bundle_json in enumerate(sidecar.bundles):
+        try:
+            verified = bundle_verifier.verify(bundle_json)
+        except TrustMaterialUnavailableError as exc:
+            saw_unavailable = True
+            failures.append(
+                VerificationFailure(
+                    "evidence-unavailable", str(exc), bundle_index=index
+                )
+            )
+            continue
+        except Exception as exc:
+            failures.append(
+                VerificationFailure("invalid-bundle", str(exc), bundle_index=index)
+            )
+            continue
+
+        signer_matches = expected_signer is None or expected_signer == SignerIdentity(
+            verified.identity,
+            verified.issuer,
+        )
+        if not signer_matches:
+            failures.append(
+                VerificationFailure(
+                    "untrusted-identity",
+                    "certificate identity and OIDC issuer do not match "
+                    "the explicit signer requirement",
+                    bundle_index=index,
+                )
+            )
+
+        predicate_type: str | None = None
+        details: dict[str, object] = {}
+        evidence_verified = False
+        if verified.payload_type != InTotoStatement.PAYLOAD_TYPE:
+            failures.append(
+                VerificationFailure(
+                    "unsupported-payload-type",
+                    f"unsupported DSSE payload type {verified.payload_type!r}",
+                    bundle_index=index,
+                )
+            )
+            evidence.append(
+                VerifiedEvidence(
+                    bundle_index=index,
+                    identity=verified.identity,
+                    issuer=verified.issuer,
+                    predicate_type=None,
+                    verified=False,
+                    timestamps=verified.timestamps,
+                )
+            )
+            continue
+        try:
+            parsed_statement = InTotoStatement.from_payload(verified.payload)
+            predicate_type = parsed_statement.predicate_type
+        except StatementError as exc:
+            failures.append(
+                VerificationFailure("invalid-statement", str(exc), bundle_index=index)
+            )
+            evidence.append(
+                VerifiedEvidence(
+                    bundle_index=index,
+                    identity=verified.identity,
+                    issuer=verified.issuer,
+                    predicate_type=None,
+                    verified=False,
+                    timestamps=verified.timestamps,
+                )
+            )
+            continue
+
+        if predicate_type == PublishStatement.PREDICATE_TYPE:
+            try:
+                statement = PublishStatement.from_statement(parsed_statement).bind(
+                    expected_filename=artifact_name,
+                    expected_sha256=artifact_sha256,
+                    accepted_target_channels=(channel,) if channel is not None else (),
+                )
+            except PublishStatementError as exc:
+                failures.append(
+                    VerificationFailure("invalid-cep27", str(exc), bundle_index=index)
+                )
+            else:
+                evidence_verified = True
+                details["target_channel"] = statement.target_channel
+                if signer_matches:
+                    package_verified = True
+                else:
+                    saw_untrusted_publish = True
+        elif predicate_type == SlsaProvenance.PREDICATE_TYPE:
+            try:
+                subjects = parsed_statement.subjects()
+                if not any(
+                    hmac.compare_digest(
+                        subject.digest.get("sha256", ""), artifact_sha256.lower()
+                    )
+                    for subject in subjects
+                ):
+                    raise StatementError(
+                        "SLSA provenance subject sha256 does not match the package"
+                    )
+                details["provenance"] = SlsaProvenance.from_statement(
+                    parsed_statement
+                ).to_dict()
+                details["subjects"] = [subject.to_dict() for subject in subjects]
+                evidence_verified = True
+            except StatementError as exc:
+                failures.append(
+                    VerificationFailure(
+                        "invalid-provenance", str(exc), bundle_index=index
+                    )
+                )
+        else:
+            failures.append(
+                VerificationFailure(
+                    "unsupported-predicate",
+                    f"unrecognized predicate type {predicate_type!r}",
+                    bundle_index=index,
+                )
+            )
+
+        evidence.append(
+            VerifiedEvidence(
+                bundle_index=index,
+                identity=verified.identity,
+                issuer=verified.issuer,
+                predicate_type=predicate_type,
+                verified=evidence_verified,
+                timestamps=verified.timestamps,
+                details=details,
+            )
+        )
+
+    if (
+        not package_verified
+        and evidence
+        and not any(
+            item.predicate_type == PublishStatement.PREDICATE_TYPE for item in evidence
+        )
+    ):
+        failures.append(
+            VerificationFailure(
+                "missing-publish-attestation",
+                "no valid artifact-bound CEP 27 publish attestation was found",
+            )
+        )
+
+    if package_verified:
+        status = VerificationStatus.VERIFIED
+    elif saw_unavailable:
+        status = VerificationStatus.EVIDENCE_UNAVAILABLE
+    elif saw_untrusted_publish:
+        status = VerificationStatus.UNTRUSTED_IDENTITY
+    else:
+        status = VerificationStatus.INVALID
+    return VerificationResult(
+        status=status,
+        artifact=artifact_name,
+        artifact_sha256=artifact_sha256,
+        channel=channel,
+        evidence=tuple(evidence),
+        failures=tuple(failures),
+        prefix_sidecar=sidecar.prefix_sidecar,
+        authorization=(
+            AuthorizationStatus.NOT_EVALUATED
+            if expected_signer is None
+            else (
+                AuthorizationStatus.VERIFIED
+                if package_verified
+                else AuthorizationStatus.FAILED
+            )
+        ),
+        expected_signer=expected_signer,
+    )
+
+
+def verify_artifact(
+    artifact: Path,
+    sidecar: Sidecar,
+    *,
+    verifier: BundleVerifier | None = None,
+    channel: str | None = None,
+    expected_signer: SignerIdentity | None = None,
+) -> VerificationResult:
+    """Hash an archive and verify its sidecar."""
+    digest = hashlib.sha256()
+    with artifact.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return verify_bundles(
+        sidecar,
+        artifact_name=artifact.name,
+        artifact_sha256=digest.hexdigest(),
+        verifier=verifier,
+        channel=channel,
+        expected_signer=expected_signer,
+    )
+
+
+__all__ = [
+    "BundleVerifier",
+    "CryptographicVerification",
+    "SigstoreBundleMaterial",
+    "SigstoreVerifier",
+    "verify_artifact",
+    "verify_bundles",
+]

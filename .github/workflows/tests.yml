@@ -1,0 +1,65 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/tests.yml"
+      - "pixi.lock"
+      - "pyproject.toml"
+      - "src/**"
+      - "tests/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/tests.yml"
+      - "pixi.lock"
+      - "pyproject.toml"
+      - "src/**"
+      - "tests/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Static checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@a09b6247153796b190642a2b53fac4241043cf6f # v0.10.0
+        with:
+          pixi-version: v0.76.1
+          environments: dev
+          cache: true
+      - name: Run static checks
+        run: pixi run --locked -e dev check
+
+  tests:
+    name: ${{ matrix.os }}, Python 3.${{ matrix.python-minor }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-minor: ["10", "11", "12", "13", "14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@a09b6247153796b190642a2b53fac4241043cf6f # v0.10.0
+        with:
+          pixi-version: v0.76.1
+          environments: test-py3${{ matrix.python-minor }}
+          cache: true
+      - name: Run tests
+        run: pixi run --locked -e test-py3${{ matrix.python-minor }} test
