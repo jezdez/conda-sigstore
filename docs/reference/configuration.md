@@ -20,7 +20,12 @@ not change package operations.
 | `trust_config` | local path or `null` | `null` | Optional Sigstore client trust configuration |
 
 Unknown fields are rejected. `trust_config` must identify an existing local
-file. With `null`, verification uses Sigstore's production trust configuration.
+file no larger than 1 MiB. With `null`, verification uses Sigstore's production
+trust configuration.
+
+Source auditing also bounds package-controlled input. Retained package archives
+larger than 4 GiB and rendered recipes larger than 1 MiB are reported as
+unavailable evidence before parsing.
 
 Publisher authorization is not configured by this plugin. CEP 27 does not
 standardize how conda channels distribute publisher delegation. The `verify`

@@ -133,6 +133,7 @@ class VerificationResult:
     status: VerificationStatus
     artifact: str
     artifact_sha256: str | None
+    sidecar_sha256: str | None = None
     channel: str | None = None
     evidence: tuple[VerifiedEvidence, ...] = ()
     failures: tuple[VerificationFailure, ...] = ()
@@ -150,6 +151,15 @@ class VerificationResult:
                     field_name="artifact_sha256",
                 ),
             )
+        if self.sidecar_sha256 is not None:
+            object.__setattr__(
+                self,
+                "sidecar_sha256",
+                validate_sha256(
+                    self.sidecar_sha256,
+                    field_name="sidecar_sha256",
+                ),
+            )
 
     @property
     def verified(self) -> bool:
@@ -162,6 +172,7 @@ class VerificationResult:
             "version": 1,
             "artifact": self.artifact,
             "artifact_sha256": self.artifact_sha256,
+            "sidecar_sha256": self.sidecar_sha256,
             "channel": self.channel,
             "status": self.status.value,
             "authorization": self.authorization.value,

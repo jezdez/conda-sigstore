@@ -25,6 +25,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   attestation publishing.
 - Optional exact signer identity and OIDC issuer verification for
   `conda sigstore verify`.
+- Versioned JSON output with artifact and observed sidecar SHA-256 digests.
 - An unregistered install-verifier adapter for the future conda hook and
   repodata record-preservation contracts.
 - Rich terminal rendering for human-readable command output.

@@ -31,6 +31,7 @@ def test_verification_json_reports_evidence_without_authorization() -> None:
         status=VerificationStatus.VERIFIED,
         artifact="package-1-0.conda",
         artifact_sha256="ab" * 32,
+        sidecar_sha256="cd" * 32,
         evidence=(
             VerifiedEvidence(
                 bundle_index=0,
@@ -45,4 +46,5 @@ def test_verification_json_reports_evidence_without_authorization() -> None:
     assert result.verified
     assert result.to_dict()["authorization"] == "not-evaluated"
     assert result.to_dict()["expected_signer"] is None
+    assert result.to_dict()["sidecar_sha256"] == "cd" * 32
     assert result.to_dict()["evidence"][0]["verified"] is True

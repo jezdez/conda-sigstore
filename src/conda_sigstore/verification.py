@@ -430,6 +430,7 @@ def verify_bundles(
         status=status,
         artifact=artifact_name,
         artifact_sha256=artifact_sha256,
+        sidecar_sha256=sidecar.sha256,
         channel=channel,
         evidence=tuple(evidence),
         failures=tuple(failures),

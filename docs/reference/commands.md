@@ -42,12 +42,14 @@ bundle array. Verification covers:
 - strict CEP 27 statement structure
 - an included target-channel claim
 
-When the statement contains `targetChannel`, pass `--channel` with the expected
-channel. A mismatch or missing expected channel fails that bundle.
+When `--channel` is supplied, an included `targetChannel` must match it. Without
+`--channel`, the claim is validated and reported but is not compared with an
+expected channel.
 
 The result reports the authenticated certificate identity and issuer. It does
 not call the signer authorized for the channel. `--json` emits the versioned
-result envelope with all predicates, timestamps, and sibling failures.
+result envelope with artifact and sidecar SHA-256 digests, all predicates,
+timestamps, and sibling failures.
 
 Pass `--cert-identity` and `--cert-oidc-issuer` together to require one exact
 certificate SAN and literal OIDC issuer for this verification. These option

@@ -84,30 +84,14 @@ and any audit-only provenance found in sibling bundles.
 An invalid sibling remains visible but does not overturn a valid CEP 27 bundle
 for the same artifact.
 
-## 4. Publish a draft repodata sidecar
+## 4. Choose a publishing workflow
 
-A channel publisher wraps one or more complete bundle objects in a JSON array.
-For a single bundle, the resulting file has this shape:
+You now have a complete Bundle v0.3 object. Channel tooling is responsible for
+uploading it with the package and serving the channel-specific sidecar format.
 
-```json
-[
-  {"mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json"}
-]
-```
-
-The abbreviated object only illustrates the array wrapper. Preserve the full
-bundle object produced by `attest`.
-
-A channel using the draft `repodata` transport publishes both:
-
-1. `<artifact>.sigs`, containing the JSON array of complete bundle objects
-2. an `attestations` descriptor in the artifact's repodata record with the
-   exact sidecar byte size and SHA-256 digest
-
-Consumers must not probe for `.sigs` when that descriptor is absent. Channel
-publication is covered in
-[Add draft repodata-advertised sidecars](../how-to/repodata-sidecars.md).
-
-Next, use [standard Sigstore tools](sigstore-tools.md) to independently inspect
-and verify the bundle, or follow the
-[Prefix.dev publishing guide](../how-to/publish-prefix.md).
+- Follow [Add draft repodata-advertised sidecars](../how-to/repodata-sidecars.md)
+  for the integrity-bound `.sigs` proposal.
+- Follow [Publish attestations to Prefix.dev](../how-to/publish-prefix.md) for
+  Prefix Trusted Publishing and `.v0.sigs`.
+- Use [standard Sigstore tools](sigstore-tools.md) to inspect the bundle with an
+  independent verifier before publication.

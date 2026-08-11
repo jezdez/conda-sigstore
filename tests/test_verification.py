@@ -66,6 +66,7 @@ def test_one_verified_bundle_suffices_despite_invalid_sibling() -> None:
     assert result.status is VerificationStatus.VERIFIED
     assert result.evidence[0].verified
     assert result.to_dict()["authorization"] == "not-evaluated"
+    assert result.to_dict()["sidecar_sha256"] == "cd" * 32
     assert result.failures[0].code == "invalid-bundle"
     assert result.prefix_sidecar
 

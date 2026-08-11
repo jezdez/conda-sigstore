@@ -24,8 +24,6 @@ still change incompatibly.
 - Reads `.sigs` sidecars only when repodata advertises their exact SHA-256 and
   size.
 - Reads Prefix.dev `.v0.sigs` sidecars only when explicitly requested.
-- Optionally rejects packages before extraction unless repodata advertises a
-  valid, exact artifact-bound CEP 27 sidecar.
 - Audits installed environments and reports available publication, SLSA, and
   recipe source evidence.
 - Caches integrity-bound sidecars by digest and rehashes them on every read.
@@ -36,20 +34,24 @@ claim that the package is safe.
 
 ## Install
 
-Install the plugin into the Python environment that runs conda. Once a conda
-package is published, current standalone conda installations can use:
+Install the plugin into the same environment as conda. Until a conda package is
+published, create a dedicated conda environment and install the PyPI release
+there:
 
 ```console
-conda self install conda-sigstore
+conda create -n conda-sigstore -c conda-forge conda pip
+conda activate conda-sigstore
+python -m pip install conda-sigstore
 ```
 
-There is no published package yet.
+The PyPI command becomes available with the first release. There is no
+published package yet.
 
 For development, clone this repository and use its locked Pixi environment:
 
 ```console
-pixi install -e test
-pixi run -e test conda sigstore --help
+pixi install --locked -e test
+pixi run --locked -e test conda sigstore --help
 ```
 
 Direct `pip install` into an unrelated Python environment does not register the

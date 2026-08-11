@@ -45,10 +45,11 @@ def test_verify_json_passes_explicit_signer_requirement(
             channel=channel,
             expected_signer=expected_signer,
         )
-        return VerificationResult(
+        result = VerificationResult(
             status=VerificationStatus.VERIFIED,
             artifact=artifact_path.name,
             artifact_sha256="ab" * 32,
+            sidecar_sha256=loaded.sha256,
             channel=channel,
             evidence=(
                 VerifiedEvidence(
@@ -63,6 +64,8 @@ def test_verify_json_passes_explicit_signer_requirement(
             authorization=AuthorizationStatus.VERIFIED,
             expected_signer=expected_signer,
         )
+        captured["result"] = result
+        return result
 
     monkeypatch.setattr(
         cli_verify.SigstoreSettings,
@@ -91,10 +94,17 @@ def test_verify_json_passes_explicit_signer_requirement(
     captured_output = capsys.readouterr()
     output = captured_output.out
     report = json.loads(output)
-    assert output == json.dumps(report, indent=2, sort_keys=True) + "\n"
+    assert report == captured["result"].to_dict()
+    expected_output = json.dumps(
+        captured["result"].to_dict(),
+        indent=2,
+        sort_keys=True,
+    )
+    assert output == f"{expected_output}\n"
     assert captured_output.err == ""
     assert rich_console.file.getvalue() == ""
     assert report["authorization"] == "verified"
+    assert report["sidecar_sha256"] == sidecar.sha256
     assert report["expected_signer"] == {
         "identity": "publisher@example.org",
         "issuer": "https://issuer.example",

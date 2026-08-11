@@ -8,7 +8,7 @@ Install [Pixi](https://pixi.sh), clone the repository, then install the locked
 development environments:
 
 ```console
-pixi install --all
+pixi install --locked --all
 ```
 
 Run the focused checks while developing:
@@ -20,7 +20,7 @@ pixi run --locked -e docs docs
 ```
 
 The test matrix covers Python 3.10 through 3.14. Run a specific environment
-with `pixi run -e test-py314 test`.
+with `pixi run --locked -e test-py314 test`.
 
 ## Live interoperability
 
@@ -31,7 +31,7 @@ fresh signing round trip against Sigstore staging.
 Run the Prefix.dev check locally with:
 
 ```console
-CONDA_SIGSTORE_PREFIX_INTEROP=1 pixi run -e test test-interop
+CONDA_SIGSTORE_PREFIX_INTEROP=1 pixi run --locked -e test test-interop
 ```
 
 The staging check requires a workload identity and is intended for the GitHub
