@@ -125,13 +125,26 @@ def test_verify_json_passes_explicit_signer_requirement(
     assert "super-secret" not in output
 
 
-def test_verify_human_output_uses_injected_console(
-    monkeypatch, tmp_path, capsys, sigstore_parser, rich_console
+@pytest.mark.parametrize(
+    ("status", "expected_exit"),
+    [
+        (VerificationStatus.VERIFIED, 0),
+        (VerificationStatus.INVALID, 1),
+    ],
+)
+def test_verify_human_output_and_exit_status(
+    monkeypatch,
+    tmp_path,
+    capsys,
+    sigstore_parser,
+    rich_console,
+    status,
+    expected_exit,
 ) -> None:
     artifact = tmp_path / "demo[1]-1-0.conda"
     artifact.write_bytes(b"package")
     result = VerificationResult(
-        status=VerificationStatus.VERIFIED,
+        status=status,
         artifact=artifact.name,
         artifact_sha256="ab" * 32,
         evidence=(
@@ -165,10 +178,10 @@ def test_verify_human_output_uses_injected_console(
         ["verify", str(artifact), "--bundle", "bundle.json"]
     )
 
-    assert cli_verify.execute_verify(args, console=rich_console) == 0
+    assert cli_verify.execute_verify(args, console=rich_console) == expected_exit
     output = rich_console.file.getvalue()
     assert artifact.name in output
-    assert "verified" in output
+    assert status.value in output
     assert "publisher@example.org" in output
     assert capsys.readouterr().out == ""
 
