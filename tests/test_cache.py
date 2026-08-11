@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from conda.exceptions import LockError
 
 from conda_sigstore.cache import DigestCache
 
@@ -25,6 +26,17 @@ def test_sidecar_cache_rejects_wrong_expected_digest(tmp_path: Path) -> None:
         DigestCache(tmp_path).store_sidecar(b"sidecar", expected_sha256="ab" * 32)
 
 
+def test_sidecar_cache_returns_miss_for_missing_or_oversized_entry(
+    tmp_path: Path,
+) -> None:
+    cache = DigestCache(tmp_path)
+    assert cache.load_sidecar("ab" * 32) is None
+
+    body = b"sidecar"
+    digest = cache.store_sidecar(body)
+    assert cache.load_sidecar(digest, max_bytes=len(body) - 1) is None
+
+
 def test_cache_uses_conda_disk_lock(tmp_path: Path, monkeypatch) -> None:
     entered = []
 
@@ -45,3 +57,16 @@ def test_cache_uses_conda_disk_lock(tmp_path: Path, monkeypatch) -> None:
     cache.store_sidecar(b"sidecar")
 
     assert entered == [True]
+
+
+def test_cache_reports_conda_lock_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_lock(_file):
+        raise LockError("lock unavailable")
+
+    monkeypatch.setattr("conda_sigstore.cache.lock", fail_lock)
+
+    with pytest.raises(OSError, match="could not lock"):
+        DigestCache(tmp_path).store_sidecar(b"sidecar")
