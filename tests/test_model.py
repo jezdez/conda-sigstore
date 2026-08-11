@@ -14,8 +14,11 @@ from conda_sigstore.model import (
 def test_validate_sha256_normalizes_hexadecimal() -> None:
     assert validate_sha256("AB" * 32) == "ab" * 32
 
+
+@pytest.mark.parametrize("value", ["not-a-digest", "ab" * 31 + "  "])
+def test_validate_sha256_rejects_non_hexadecimal(value: str) -> None:
     with pytest.raises(ValueError, match="64-character hexadecimal"):
-        validate_sha256("not-a-digest")
+        validate_sha256(value)
 
 
 def test_attestation_descriptor_requires_lowercase_digest() -> None:

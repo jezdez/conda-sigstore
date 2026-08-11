@@ -12,14 +12,12 @@ if TYPE_CHECKING:
 
 def validate_sha256(value: object, *, field_name: str = "sha256") -> str:
     """Validate and normalize one SHA-256 hexadecimal digest."""
-    if not isinstance(value, str) or len(value) != 64:
+    if (
+        not isinstance(value, str)
+        or len(value) != 64
+        or not all(character in "0123456789abcdefABCDEF" for character in value)
+    ):
         raise ValueError(f"{field_name} must be a 64-character hexadecimal string")
-    try:
-        bytes.fromhex(value)
-    except ValueError as exc:
-        raise ValueError(
-            f"{field_name} must be a 64-character hexadecimal string"
-        ) from exc
     return value.lower()
 
 
