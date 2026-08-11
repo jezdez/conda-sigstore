@@ -113,7 +113,12 @@ def create_attestation(
             stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary_path, destination)
+        try:
+            os.link(temporary_path, destination)
+        except FileExistsError:
+            raise FileExistsError(
+                f"attestation output already exists: {destination}"
+            ) from None
     finally:
         temporary_path.unlink(missing_ok=True)
     return destination

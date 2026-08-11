@@ -81,6 +81,29 @@ def test_create_attestation_does_not_overwrite_existing_output(tmp_path):
     assert output.read_text() == "keep"
 
 
+def test_create_attestation_does_not_overwrite_output_created_during_signing(
+    tmp_path, monkeypatch
+):
+    package = tmp_path / "demo-1.0-0.conda"
+    package.write_bytes(b"package")
+    output = tmp_path / "bundle.json"
+
+    def create_output(*args, **kwargs):
+        output.write_text("keep")
+        return '{"mediaType":"test"}'
+
+    monkeypatch.setattr(attestation, "sign_statement", create_output)
+
+    with pytest.raises(FileExistsError, match="already exists"):
+        attestation.create_attestation(
+            package,
+            target_channel="https://conda.anaconda.org/example",
+            output=output,
+        )
+
+    assert output.read_text() == "keep"
+
+
 def test_create_attestation_refuses_package_changed_during_signing(
     tmp_path, monkeypatch
 ):
