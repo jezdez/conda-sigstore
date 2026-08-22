@@ -42,6 +42,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - A tag-driven release workflow that builds once, records GitHub provenance,
   stages an immutable GitHub release, and publishes the same distributions to
   PyPI with Trusted Publishing and attestations.
+- A generic in-toto library API for signing a parsed statement and returning
+  its authenticated signer and timestamp evidence after verification.
 
 ### Changed
 
