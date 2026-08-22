@@ -1,4 +1,4 @@
-"""Create CEP 27 Sigstore attestations without owning upload behavior."""
+"""Create Sigstore attestations without owning output or upload behavior."""
 
 from __future__ import annotations
 
@@ -8,17 +8,18 @@ from pathlib import Path
 
 from conda.gateways.disk.read import compute_sum
 
+from .exceptions import BundleVerificationError
 from .settings import MAX_TRUST_CONFIG_BYTES
-from .statements import PublishStatement
+from .statements import InTotoStatement, PublishStatement
 from .transport import read_bounded_file
 
 
-def sign_statement(
-    statement: PublishStatement,
+def sign_in_toto_statement(
+    statement: InTotoStatement,
     *,
     trust_config_path: Path | None = None,
 ) -> str:
-    """Sign a statement and locally verify the resulting Sigstore bundle."""
+    """Sign an in-toto statement and locally verify the resulting bundle."""
     from sigstore.dsse import Statement
     from sigstore.models import ClientTrustConfig
     from sigstore.oidc import IdentityToken, Issuer, detect_credential
@@ -45,7 +46,8 @@ def sign_statement(
         else Issuer(trust_config.signing_config.get_oidc_url()).identity_token()
     )
     signing_context = SigningContext.from_trust_config(trust_config)
-    dsse_statement = Statement(statement.payload())
+    payload = statement.payload()
+    dsse_statement = Statement(payload)
 
     with signing_context.signer(token) as signer:
         bundle = signer.sign_dsse(dsse_statement)
@@ -54,16 +56,26 @@ def sign_statement(
     verifier = SigstoreVerifier(
         verifier=Verifier(trusted_root=trust_config.trusted_root)
     )
-    verified = verifier.verify(bundle_json)
-    if statement.target_channel is None:  # pragma: no cover - build contract
-        raise ValueError("CEP 27 signing requires targetChannel")
-    PublishStatement.from_payload(verified.payload).bind(
-        expected_filename=statement.filename,
-        expected_sha256=statement.sha256,
-        accepted_target_channels=(statement.target_channel,),
-        require_target_channel=True,
-    )
+    verified = verifier.verify_statement(bundle_json)
+    if verified.payload != payload:
+        raise BundleVerificationError(
+            "locally verified bundle payload does not match the signed statement"
+        )
     return bundle_json
+
+
+def sign_statement(
+    statement: PublishStatement,
+    *,
+    trust_config_path: Path | None = None,
+) -> str:
+    """Sign and locally verify one strict CEP 27 publication statement."""
+    if statement.target_channel is None:
+        raise ValueError("CEP 27 signing requires targetChannel")
+    return sign_in_toto_statement(
+        InTotoStatement.from_payload(statement.payload()),
+        trust_config_path=trust_config_path,
+    )
 
 
 def create_attestation(

@@ -369,6 +369,7 @@ def test_bench_workspace_locked_install_sequence(
 
     monkeypatch.setattr(plugin_manager, "extract_package", record_extraction)
     monkeypatch.setattr(package_cache_data, "EXTRACT_PROCESSES", 1)
+    monkeypatch.setattr(package_cache_data, "EXTRACT_THREADS", 1)
 
     sha256_passes = 0
     conda_compute_sum = path_actions.compute_sum

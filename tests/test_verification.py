@@ -35,6 +35,7 @@ from conda_sigstore.verification import (
     CryptographicVerification,
     SigstoreBundleMaterial,
     SigstoreVerifier,
+    VerifiedStatement,
     verify_artifact,
     verify_bundles,
 )
@@ -66,6 +67,53 @@ def verified(payload: bytes, *, payload_type: str = InTotoStatement.PAYLOAD_TYPE
         SignerIdentity(IDENTITY, ISSUER),
         ("time",),
     )
+
+
+def test_generic_statement_verification_reports_authenticated_evidence(
+    monkeypatch,
+) -> None:
+    payload = PublishStatement(FILENAME, DIGEST, CHANNEL).payload()
+    cryptographic = verified(payload)
+
+    def verify(self, bundle_json):
+        assert bundle_json == "bundle"
+        return cryptographic
+
+    monkeypatch.setattr(SigstoreVerifier, "verify", verify)
+
+    result = SigstoreVerifier().verify_statement("bundle")
+
+    assert result == VerifiedStatement(
+        statement=InTotoStatement.from_payload(payload),
+        payload=payload,
+        signer=cryptographic.signer,
+        timestamps=cryptographic.timestamps,
+    )
+
+
+@pytest.mark.parametrize(
+    ("result", "message"),
+    [
+        (
+            verified(
+                PublishStatement(FILENAME, DIGEST, CHANNEL).payload(),
+                payload_type="application/octet-stream",
+            ),
+            "unsupported DSSE payload type",
+        ),
+        (verified(b"{}"), "unsupported in-toto statement type"),
+    ],
+    ids=("wrong-payload-type", "malformed-statement"),
+)
+def test_generic_statement_verification_rejects_invalid_payload(
+    monkeypatch,
+    result: CryptographicVerification,
+    message: str,
+) -> None:
+    monkeypatch.setattr(SigstoreVerifier, "verify", lambda self, bundle_json: result)
+
+    with pytest.raises(ValueError, match=message):
+        SigstoreVerifier().verify_statement("bundle")
 
 
 def certificate_material(extensions: Extensions) -> SigstoreBundleMaterial:
