@@ -10,6 +10,7 @@ import conda.gateways.connection.session
 import pytest
 
 from conda_sigstore.cache import DigestCache
+from conda_sigstore.evidence import Sidecar
 from conda_sigstore.exceptions import TransportError
 from conda_sigstore.transport import SidecarTransport
 
@@ -228,6 +229,17 @@ def test_repodata_ignores_cache_write_failure(
     transport.store_repodata(sidecar)
 
     assert sidecar.sha256 == digest
+
+
+@pytest.mark.parametrize("invalid_sidecar", ["prefix", "bodyless"])
+def test_repodata_cache_rejects_non_repodata_sidecars(invalid_sidecar: str) -> None:
+    body = sidecar_bytes()
+    sidecar = SidecarTransport.parse(body, prefix_sidecar=invalid_sidecar == "prefix")
+    if invalid_sidecar == "bodyless":
+        sidecar = Sidecar(sidecar.sha256, sidecar.bundles)
+
+    with pytest.raises(ValueError, match="exact repodata sidecar bytes"):
+        SidecarTransport().store_repodata(sidecar)
 
 
 def test_repodata_does_not_cache_before_bundle_verification(tmp_path) -> None:
