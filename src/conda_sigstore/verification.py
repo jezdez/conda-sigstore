@@ -45,6 +45,16 @@ class CryptographicVerification:
     timestamps: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True, slots=True)
+class VerifiedStatement:
+    """A cryptographically verified in-toto statement and signer evidence."""
+
+    statement: InTotoStatement
+    payload: bytes
+    signer: SignerIdentity
+    timestamps: tuple[str, ...] = ()
+
+
 class BundleVerifier(Protocol):
     def verify(self, bundle_json: str) -> CryptographicVerification:
         """Cryptographically verify one bundle and return its actual identity."""
@@ -265,6 +275,20 @@ class SigstoreVerifier:
             payload=payload,
             signer=actual_identity,
             timestamps=material.timestamps(),
+        )
+
+    def verify_statement(self, bundle_json: str) -> VerifiedStatement:
+        """Verify one bundle containing an in-toto Statement v1 payload."""
+        verified = self.verify(bundle_json)
+        if verified.payload_type != InTotoStatement.PAYLOAD_TYPE:
+            raise StatementError(
+                f"unsupported DSSE payload type {verified.payload_type!r}"
+            )
+        return VerifiedStatement(
+            statement=InTotoStatement.from_payload(verified.payload),
+            payload=verified.payload,
+            signer=verified.signer,
+            timestamps=verified.timestamps,
         )
 
 

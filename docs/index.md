@@ -91,6 +91,7 @@ how-to/offline
 reference/commands
 reference/configuration
 reference/json-output
+reference/library-api
 reference/source-attestations
 reference/standards
 reference/upstream-contracts

@@ -217,6 +217,43 @@ def test_in_toto_statement_owns_predicate_and_subject_parsing() -> None:
     assert statement.subjects()[0].digest["sha256"] == DIGEST
 
 
+def test_in_toto_statement_serializes_stable_payload() -> None:
+    statement = InTotoStatement.from_payload(
+        {
+            "subject": [{"digest": {"sha256": DIGEST}, "name": "artifact"}],
+            "predicateType": "https://example.org/predicate",
+            "predicate": {"label": "café"},
+            "_type": InTotoStatement.STATEMENT_TYPE,
+        }
+    )
+
+    assert (
+        statement.payload()
+        == json.dumps(
+            statement.value,
+            allow_nan=False,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    )
+    assert InTotoStatement.from_payload(statement.payload()).value == statement.value
+
+
+def test_in_toto_statement_rejects_non_json_signing_payload() -> None:
+    statement = InTotoStatement.from_payload(
+        {
+            "_type": InTotoStatement.STATEMENT_TYPE,
+            "predicateType": "https://example.org/predicate",
+            "predicate": {"unsupported": object()},
+            "subject": [{"name": "artifact", "digest": {"sha256": DIGEST}}],
+        }
+    )
+
+    with pytest.raises(StatementError, match="only JSON values"):
+        statement.payload()
+
+
 @pytest.mark.parametrize(
     ("value", "message"),
     [

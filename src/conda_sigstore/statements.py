@@ -125,6 +125,21 @@ class InTotoStatement:
             for index, value in enumerate(raw_subjects)
         )
 
+    def payload(self) -> bytes:
+        """Return stable JSON bytes suitable for DSSE signing."""
+        try:
+            return json.dumps(
+                self.value,
+                allow_nan=False,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+        except (TypeError, ValueError) as exc:
+            raise StatementError(
+                "statement payload must contain only JSON values"
+            ) from exc
+
 
 @dataclass(frozen=True, slots=True)
 class PublishStatement:
