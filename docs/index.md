@@ -6,17 +6,16 @@ installed environment, or require valid evidence before conda extracts a
 package.
 
 :::{warning}
-This is alpha software with no published release. Install verification requires
-the unreleased conda API in
+This is alpha software. Version 0.1.0 is distributed through PyPI. Install
+verification requires the unreleased conda API in
 [conda/conda#16518](https://github.com/conda/conda/pull/16518). The draft
 repodata and source-attestation formats may change incompatibly. Current conda
 `PackageRecord` objects do not yet preserve the draft repodata
 `attestations_sha256` field.
 :::
 
-Check the [installation status](how-to/install.md), then follow the
-public-package verification tutorial after a supported installation is
-available. Source contributors can run the same commands from the repository
+Follow the [installation guide](how-to/install.md), then verify a public
+package. Source contributors can run the same commands from the repository
 environment.
 
 ## Choose a documentation path

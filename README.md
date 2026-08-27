@@ -4,8 +4,8 @@
 It can also audit installed environments and, when explicitly enabled, reject a
 package before extraction when acceptable evidence is unavailable or invalid.
 
-The project is alpha software. No release has been published yet. The install
-integration requires the unreleased package-verifier API in
+The project is alpha software. Version 0.1.0 is distributed through PyPI. The
+opt-in install integration requires the unreleased package-verifier API in
 [conda/conda#16518](https://github.com/conda/conda/pull/16518), and draft
 transport and source-evidence formats may still change incompatibly.
 
@@ -29,10 +29,10 @@ change before they can select the draft transport.
 
 ## Install
 
-There is no supported end-user installation yet. The
-[installation status](https://jezdez.github.io/conda-sigstore/how-to/install/)
-lists the two releases required before `conda sigstore` can be installed and
-documents the source preview.
+Install 0.1.0 from PyPI into the environment that owns the `conda` executable.
+The [installation guide](https://jezdez.github.io/conda-sigstore/how-to/install/)
+also documents the source preview and the separate requirements for install
+enforcement.
 
 ## Commands
 

@@ -162,6 +162,7 @@ hatch-vcs = ">=0.2.0"
 hatchling = ">=1.12.2"
 python = "3.13.*"
 python-build = ">=1.2"
+twine = ">=6.2"
 
 [tool.pixi.environments]
 dev = {features = ["dev"], solve-group = "default"}
@@ -194,3 +195,4 @@ test-interop = {cmd = "pytest -o addopts= -ra -v -m live_interop tests/test_inte
 
 [tool.pixi.feature.release.tasks]
 build = {cmd = "python -m build --no-isolation", description = "Build sdist and wheel"}
+check-dist = {cmd = "python -m twine check --strict dist/*", description = "Check distribution metadata"}

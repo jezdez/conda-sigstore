@@ -102,9 +102,8 @@ delegation standard and is not part of this matrix.
 
 ## Releases
 
-Maintainers create a version tag after CI succeeds. The release workflow builds
-the distributions once, records GitHub build provenance, creates a draft
-release, publishes to PyPI through trusted publishing, and then publishes the
-GitHub release. Release immutability must be enabled in the repository settings.
-
-Add a curated changelog entry before creating the tag.
+Follow [RELEASING.md](RELEASING.md). Prepare and merge the curated changelog,
+then create an annotated bare version tag from the exact commit that passed CI.
+The release workflow builds the distributions once before it creates a draft
+GitHub release. It publishes those same files to PyPI through trusted publishing
+and makes the GitHub release public only after PyPI succeeds.

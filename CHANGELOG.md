@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-08-27
+
 ### Added
 
 - `conda sigstore attest`, `verify`, and `audit` commands backed by
@@ -59,3 +61,6 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Removed the permanently unavailable `source` field from SLSA evidence output.
 - Expanded the live Prefix interoperability check into a real strict
   pre-extraction installation followed by an environment audit.
+
+[Unreleased]: https://github.com/jezdez/conda-sigstore/compare/0.1.0...HEAD
+[0.1.0]: https://github.com/jezdez/conda-sigstore/releases/tag/0.1.0
