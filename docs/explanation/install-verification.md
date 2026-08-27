@@ -17,7 +17,7 @@ source links identify the exact Pixi and uv revisions reviewed.
 | uv | Records selected index hashes in `uv.lock` and verifies hashes supplied in requirements files. `--require-hashes` requires complete hash coverage. | None. `uv publish` discovers and uploads adjacent PEP 740 attestations, but does not generate them or verify them during installation. |
 | npm | Uses `package-lock.json` to select exact dependency versions and records Subresource Integrity values for downloaded artifacts. | None. `npm audit signatures` is a separate command that verifies registry signatures and available provenance attestations after dependencies are installed. |
 | Pixi | Verifies conda and PyPI package checksums recorded in `pixi.lock` when an artifact is installed or reused from cache. | None. Pixi creates or uploads Sigstore attestations for Prefix.dev publishing and documents external consumer verification with `gh` or `cosign`. |
-| conda with conda-sigstore | Conda retains its package digest checks. | An opt-in direct package verifier requires valid CEP 27 evidence from a descriptor-pinned or deterministic adjacent sidecar. It is an integration preview against conda/conda#16518. |
+| conda with conda-sigstore | Conda retains its package digest checks. | An opt-in direct package verifier requires valid CEP 27 evidence from a repodata-hash-pinned immutable sidecar or the separate deterministic Prefix.dev adjacent sidecar. PR 142 selection also needs conda to preserve `attestations_sha256`. It is an integration preview against conda/conda#16518. |
 
 The relevant primary documentation is:
 
@@ -88,8 +88,8 @@ fresh instead of caching receipts.
 
 An audit can measure evidence coverage after installation, but it cannot prove
 that invalid evidence was rejected before package files reached a prefix. The
-package-verifier hook puts an opt-in decision at that earlier boundary while
-conda still has the selected URL, expected digest, and archive.
+package-verifier hook makes an opt-in decision before extraction while conda
+still has the selected URL, expected digest, and archive.
 
 The verifier uses the same evidence-validation pipeline as the explicit command
 instead of caching a receipt or reimplementing Sigstore inside conda. Exact
@@ -101,14 +101,17 @@ setting and recovery controls belong in
 ## Upstream status
 
 [conda/conda#16518](https://github.com/conda/conda/pull/16518) provides the
-pre-extraction verifier boundary. This repository's locked developer
-environments use `jezdez/conda` branch `feature/package-verifiers`. No released
-conda version provides that API yet.
+pre-extraction verifier hook. This repository's locked developer environments
+use `jezdez/conda` branch `feature/package-verifiers`. No released conda
+version provides that API yet.
 
-No separate `PackageRecord.attestations` preservation change is required for
-the adjacent path. A rejection prevents that archive from being extracted and
-linked, although concurrent cache work for other packages may already have
-completed.
+The current conda `PackageRecord` model and solver conversion paths do not
+preserve PR 142's `attestations_sha256` field. A separate conda change is
+required before real solver and install flows can select
+`<artifact>.sigs.<attestations_sha256>`. The adjacent Prefix.dev `.v0.sigs`
+compatibility path needs only the selected package URL and digest. A rejection
+prevents that archive from being extracted and linked, although concurrent
+cache work for other packages may already have completed.
 
 The exact upstream contract is listed in
 [Upstream integration contracts](../reference/upstream-contracts.md).

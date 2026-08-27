@@ -58,9 +58,9 @@ An `expected_signer` object always has this shape:
 | Value | Meaning |
 | --- | --- |
 | `verified` | At least one cryptographically valid CEP 27 statement binds the exact package and satisfies any explicit signer requirement |
-| `missing` | Audit found no advertised descriptor or no explicitly selected Prefix.dev sidecar |
-| `retrieval-failed` | Advertised or selected audit evidence could not be retrieved or failed its transport size or digest check |
-| `invalid` | No acceptable CEP 27 statement exists because the descriptor, container, bundle, statement, or artifact binding is invalid or unsupported |
+| `missing` | Audit found no advertised `attestations_sha256` field or no explicitly selected Prefix.dev sidecar |
+| `retrieval-failed` | Advertised or selected audit evidence was unavailable, oversized, malformed, or did not match its advertised digest |
+| `invalid` | No acceptable CEP 27 statement exists because the container, bundle, statement, or artifact binding is invalid or unsupported |
 | `untrusted-identity` | A valid CEP 27 statement exists, but its signer does not match the explicit identity and issuer requirement |
 | `record-digest-only` | Audit has an installed record digest but no retained package archive to hash and verify |
 | `evidence-unavailable` | Required trust material, offline cached evidence, the package archive, or another verification input is unavailable |
@@ -170,24 +170,23 @@ Version 1 can emit these failure codes:
 | --- | --- |
 | `artifact-changed` | The artifact SHA-256 changed while direct verification was running |
 | `artifact-digest-mismatch` | A retained archive does not match its installed package record |
-| `digest-mismatch` | Sidecar bytes do not match the repodata descriptor SHA-256 |
+| `digest-mismatch` | Sidecar bytes do not match repodata `attestations_sha256` |
 | `evidence-unavailable` | Trust material or another input required to verify evidence is unavailable |
 | `invalid-bundle` | Sigstore bundle parsing or cryptographic verification failed |
 | `invalid-cep27` | CEP 27 structure, filename, digest, or target-channel binding failed |
-| `invalid-descriptor` | The repodata `attestations` descriptor has the wrong type, fields, or values |
+| `invalid-attestations-sha256` | Repodata `attestations_sha256` is not exactly 64 lowercase hexadecimal characters |
 | `invalid-provenance` | SLSA Provenance v1 structure or artifact binding failed |
 | `invalid-response` | A sidecar fetch implementation returned a value other than bytes |
 | `invalid-sidecar` | Sidecar JSON, duplicate-key handling, or bundle-array structure is invalid |
 | `invalid-statement` | The authenticated payload is not a valid in-toto Statement v1 |
 | `invalid-url` | A package or sidecar URL is invalid or uses an unsupported scheme |
-| `missing-attestations` | An audit record does not advertise the draft repodata descriptor |
+| `missing-attestations` | An audit record does not advertise `attestations_sha256` |
 | `missing-publish-attestation` | Authenticated evidence contains no CEP 27 publication statement |
 | `missing-sidecar` | The selected adjacent or advertised sidecar does not exist |
 | `offline-cache-miss` | Offline mode has no matching cached sidecar |
 | `record-digest-only` | No retained package archive is available for audit verification |
 | `retrieval-failed` | A local or remote sidecar could not be read |
-| `sidecar-too-large` | Input exceeds `max_sidecar_bytes` or its advertised size exceeds that limit |
-| `size-mismatch` | Sidecar bytes do not match the repodata descriptor size |
+| `sidecar-too-large` | Input exceeds `max_sidecar_bytes` while it is read or streamed |
 | `unsupported-payload-type` | A valid bundle carries a DSSE payload type other than in-toto JSON |
 | `unsupported-predicate` | A valid in-toto statement uses an unrecognized predicate type |
 | `untrusted-identity` | Certificate identity and issuer do not match the explicit signer requirement |

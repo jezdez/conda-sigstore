@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit, urlunsplit
 
-from .evidence import Sidecar
+from .evidence import Sidecar, validate_sha256
 from .exceptions import TransportError
 from .settings import DEFAULT_MAX_SIDECAR_BYTES
 
@@ -19,7 +19,6 @@ if TYPE_CHECKING:
     from typing import NoReturn
 
     from .cache import DigestCache
-    from .evidence import AttestationDescriptor
 
 
 Fetch = Callable[[str, int], bytes]
@@ -258,45 +257,62 @@ class SidecarTransport:
     def load_repodata(
         self,
         artifact_url: str,
-        descriptor: AttestationDescriptor,
+        attestations_sha256: object,
     ) -> Sidecar:
-        """Load an integrity-bound ``.sigs`` file advertised by repodata."""
-        if descriptor.size > self.max_bytes:
+        """Load the immutable sidecar selected by repodata."""
+        try:
+            expected_sha256 = validate_sha256(
+                attestations_sha256,
+                field_name="attestations_sha256",
+            )
+        except ValueError as exc:
             raise TransportError(
-                "sidecar-too-large",
-                f"advertised sidecar is {descriptor.size} bytes and exceeds the limit",
+                "invalid-attestations-sha256",
+                "repodata attestations_sha256 must be a 64-character "
+                "lowercase hexadecimal string",
+            ) from exc
+        if attestations_sha256 != expected_sha256:
+            raise TransportError(
+                "invalid-attestations-sha256",
+                "repodata attestations_sha256 must be a 64-character "
+                "lowercase hexadecimal string",
             )
 
-        request_url = self.sidecar_url(artifact_url, ".sigs")
+        request_url = self.sidecar_url(
+            artifact_url,
+            f".sigs.{expected_sha256}",
+        )
         try:
             body = (
-                self.cache.load_sidecar(descriptor.sha256, max_bytes=self.max_bytes)
+                self.cache.load_sidecar(expected_sha256, max_bytes=self.max_bytes)
                 if self.cache is not None
                 else None
             )
         except OSError:
             body = None
-        cache_miss = body is None
         if body is None:
             body = self.fetch(request_url)
-        if len(body) != descriptor.size:
-            raise TransportError(
-                "size-mismatch",
-                f"sidecar size {len(body)} does not match advertised "
-                f"size {descriptor.size}",
-            )
         digest = hashlib.sha256(body).hexdigest()
-        if not hmac.compare_digest(digest, descriptor.sha256):
+        if not hmac.compare_digest(digest, expected_sha256):
             raise TransportError(
                 "digest-mismatch",
-                "sidecar SHA-256 does not match the repodata descriptor",
+                "sidecar SHA-256 does not match repodata attestations_sha256",
             )
-        if cache_miss and self.cache is not None:
-            try:
-                self.cache.store_sidecar(body, expected_sha256=descriptor.sha256)
-            except OSError:
-                pass
         return self.parse(body)
+
+    def store_repodata(self, sidecar: Sidecar) -> None:
+        """Cache exact repodata-selected bytes after successful verification."""
+        if sidecar.prefix_sidecar or sidecar.body is None:
+            raise ValueError("only exact repodata sidecar bytes can be cached")
+        if self.cache is None:
+            return
+        try:
+            self.cache.store_sidecar(
+                sidecar.body,
+                expected_sha256=sidecar.sha256,
+            )
+        except OSError:
+            pass
 
     def load_prefix(
         self,

@@ -9,7 +9,9 @@ package.
 This is alpha software with no published release. Install verification requires
 the unreleased conda API in
 [conda/conda#16518](https://github.com/conda/conda/pull/16518). The draft
-repodata and source-attestation formats may change incompatibly.
+repodata and source-attestation formats may change incompatibly. Current conda
+`PackageRecord` objects do not yet preserve the draft repodata
+`attestations_sha256` field.
 :::
 
 Check the [installation status](how-to/install.md), then follow the
@@ -47,7 +49,7 @@ Look up commands, configuration, standards, and upstream contracts.
 :link: explanation/design
 :link-type: doc
 
-Understand the design and security boundaries.
+Understand the design and security properties.
 :::
 
 ::::
@@ -58,7 +60,7 @@ A verified result binds the package filename and SHA-256 to a valid Sigstore
 bundle and reports the authenticated certificate identity and issuer. It does
 not establish that the signer was authorized to publish to a channel or that
 the package is safe. Read the [security model](explanation/security-model.md)
-for the complete boundary.
+for the complete set of verified properties and exclusions.
 
 ```{toctree}
 :hidden:

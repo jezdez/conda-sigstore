@@ -11,7 +11,7 @@ The plugin answers the first three. Current conda standards do not provide the
 delegation needed to answer the fourth without consumer-authored policy or
 undocumented trust in channel admission.
 
-## Signing boundary
+## Signing step
 
 Signing binds the final package bytes and requested target channel in a CEP 27
 statement, then uses Sigstore to authenticate the signer and record the event.
@@ -36,11 +36,11 @@ trust material to official `sigstore-python` 4.x APIs. It implements no custom
 cryptography and no second Sigstore network stack.
 
 Pixi and Rattler-Build use the `rattler_upload` crate for Prefix.dev publishing.
-The shared boundary is the standard Sigstore bundle and CEP 27 statement, so
+The shared format is the standard Sigstore bundle and CEP 27 statement, so
 the Python plugin does not embed `sigstore-rs` or duplicate the Rust upload
 client.
 
-## Verification boundary
+## Verification stages
 
 Verification has three layers: the sidecar must be acquired without ambiguity,
 Sigstore must authenticate its cryptographic material, and a strict CEP 27
@@ -54,13 +54,17 @@ overturning a valid artifact-bound statement. The container itself must still
 be well formed so a verifier never has to guess which bytes constitute an
 entry.
 
-## Installation boundary
+## Installation check
 
 The package-verifier hook places the check after download but before extraction.
 That is the last point where conda has the selected URL, the expected digest,
 and the final archive while it can still reject the package before modifying a
-prefix. The selected URL and SHA-256 are also sufficient for adjacent discovery,
-so this path does not depend on conda preserving a new repodata field.
+prefix. The PR 142 transport also needs `attestations_sha256` from the selected
+package record. Current conda `PackageRecord` objects and solver conversion
+paths do not preserve the field, so a conda change is required before real
+solver and install flows can select the content-addressed sidecar. The selected
+URL and SHA-256 are sufficient only for the separate adjacent Prefix.dev
+compatibility transport.
 
 The hook is an integration preview against conda/conda#16518 and remains
 disabled by default. See
@@ -69,27 +73,33 @@ and [Upstream integration contracts](../reference/upstream-contracts.md).
 
 ## Transport choices
 
-The draft repodata transport lets channel metadata commit to the exact sidecar
-bytes. That commitment makes sidecar discovery explicit and protects the
-container before it is parsed.
+The draft repodata transport lets channel metadata commit to exact sidecar
+bytes through `attestations_sha256`. The client validates the field before URL
+construction, fetches immutable `<artifact>.sigs.<sha256>`, enforces a streaming
+limit, and verifies the digest before parsing the container. Mutable
+`<artifact>.sigs` exists for servers and generic tooling, not conda-client
+retrieval.
 
 Prefix.dev already publishes deterministic adjacent sidecars without that
 repodata commitment. Supporting the existing convention provides useful
 interoperability and install enforcement without waiting for channel metadata
 changes, but the weaker discovery property must remain visible.
 
-When a descriptor is present, it stays authoritative. Falling back after an
-advertised sidecar fails would let an attacker replace stronger metadata-bound
-evidence with an unpinned adjacent file. Exact filenames and discovery rules
-belong in [Standards and formats](../reference/standards.md).
+When `attestations_sha256` is present, it stays authoritative. Falling back
+after the selected immutable sidecar fails would let an attacker replace
+stronger repodata-bound evidence with an unpinned adjacent file. Prefix.dev
+`.v0.sigs` is selected only when the field is absent under separate plugin
+policy. Exact filenames and discovery rules belong in
+[Standards and formats](../reference/standards.md).
 
 ## Cache design
 
-The cache stores evidence bytes and enough artifact context to rediscover them.
-It does not store a verification verdict. Every read rehashes and
-cryptographically reverifies the evidence because trust material and verifier
-behavior can change. Auditing also needs the original archive bytes, which an
-extracted-only package cache entry cannot provide.
+The cache stores exact sidecar bytes only after at least one bundle completes
+Sigstore and CEP 27 verification. It stores enough artifact context to
+rediscover those bytes, but it does not store a verification verdict. Every
+read rehashes and cryptographically reverifies the evidence because trust
+material and verifier behavior can change. Auditing also needs the original
+archive bytes, which an extracted-only package cache entry cannot provide.
 
 ## Separate evidence classes
 

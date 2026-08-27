@@ -25,16 +25,23 @@ Packages without a retained archive report `record-digest-only`.
 
 ## Audit repodata-advertised evidence
 
-The default mode uses only a draft `attestations` descriptor preserved on the
+The default mode uses only a draft `attestations_sha256` field preserved on the
 installed package record:
 
 ```console
 conda sigstore audit -n runtime --json
 ```
 
-The descriptor selects an integrity-bound `.sigs` sidecar. A record without a
-descriptor reports `missing`. The default mode does not probe for an adjacent
-sidecar.
+The field must be exactly 64 lowercase hexadecimal characters and selects
+`<artifact>.sigs.<attestations_sha256>`. The audit enforces the configured
+streaming limit, verifies the exact sidecar digest, and only then parses the
+bundle array. A record without the field reports `missing`. The default mode
+does not probe either the mutable `.sigs` URL or an adjacent `.v0.sigs` file.
+
+Current conda `PackageRecord` objects and solver conversion paths do not
+preserve `attestations_sha256`. Real installed-environment audits need a conda
+change before they can select the PR 142 transport, even when a channel already
+publishes the immutable sidecar.
 
 ## Audit Prefix.dev evidence
 
@@ -74,7 +81,7 @@ Common statuses are:
 | --- | --- |
 | `verified` | Inspect the reported signer and predicates for the evidence you expected |
 | `missing` | Confirm the selected transport and whether the channel publishes a sidecar |
-| `retrieval-failed` | Check channel access and any advertised size or digest |
+| `retrieval-failed` | Check channel access, the streaming limit, and the advertised digest |
 | `invalid` | Treat the sidecar or required statement as unusable |
 | `untrusted-identity` | Check the independently supplied signer requirement |
 | `record-digest-only` | Restore or redownload the exact package archive before auditing again |

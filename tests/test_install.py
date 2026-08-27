@@ -114,15 +114,13 @@ def test_current_install_verifiers_share_sigstore_trust(
     SigstoreVerifier.shared.cache_clear()
 
 
-def test_install_verifier_accepts_advertised_sidecar_without_rehashing(
+def test_install_verifier_accepts_current_repodata_sidecar_without_archive(
     tmp_path: Path,
     package_record: PackageRecord,
     sidecar: bytes,
 ) -> None:
-    package_record.attestations = {
-        "sha256": hashlib.sha256(sidecar).hexdigest(),
-        "size": len(sidecar),
-    }
+    sidecar_sha256 = hashlib.sha256(sidecar).hexdigest()
+    package_record.attestations_sha256 = sidecar_sha256
     fetched = []
 
     def fetch(url: str, max_bytes: int) -> bytes:
@@ -140,11 +138,11 @@ def test_install_verifier_accepts_advertised_sidecar_without_rehashing(
     missing_archive = tmp_path / FILENAME
 
     assert verifier.verify(package_record, missing_archive, DIGEST) is None
-    assert fetched == [(f"{CHANNEL}/linux-64/{FILENAME}.sigs", 1024)]
+    assert fetched == [(f"{CHANNEL}/linux-64/{FILENAME}.sigs.{sidecar_sha256}", 1024)]
     assert not missing_archive.exists()
 
 
-def test_install_verifier_accepts_adjacent_prefix_sidecar_without_descriptor(
+def test_install_verifier_accepts_adjacent_prefix_sidecar_without_advertisement(
     tmp_path: Path,
     package_record: PackageRecord,
     sidecar: bytes,
@@ -168,11 +166,17 @@ def test_install_verifier_accepts_adjacent_prefix_sidecar_without_descriptor(
     assert fetched == [f"{CHANNEL}/linux-64/{FILENAME}.v0.sigs"]
 
 
-def test_install_verifier_does_not_fall_back_from_broken_descriptor(
+@pytest.mark.parametrize(
+    "advertised_sha256",
+    [None, 1, "bad", "AB" * 32],
+    ids=("null", "integer", "malformed", "uppercase"),
+)
+def test_install_verifier_rejects_invalid_current_metadata_without_fallback(
     tmp_path: Path,
     package_record: PackageRecord,
+    advertised_sha256: object,
 ) -> None:
-    package_record.attestations = {"sha256": "bad", "size": 1}
+    package_record.attestations_sha256 = advertised_sha256
     verifier = InstallVerifier(
         EnvironmentAuditor(
             SigstoreSettings(),
@@ -180,17 +184,20 @@ def test_install_verifier_does_not_fall_back_from_broken_descriptor(
             transport="install",
             sidecars=SidecarTransport(
                 fetcher=lambda *_args: pytest.fail(
-                    "a broken advertised descriptor must not fall back"
+                    "invalid advertised metadata must not fetch or fall back"
                 )
             ),
         )
     )
 
-    with pytest.raises(CondaVerificationError, match="invalid-descriptor"):
+    with pytest.raises(
+        CondaVerificationError,
+        match="invalid-attestations-sha256",
+    ):
         verifier.verify(package_record, tmp_path / FILENAME, DIGEST)
 
 
-def test_install_verifier_does_not_fall_back_when_advertised_sidecar_is_missing(
+def test_install_verifier_ignores_old_nested_attestations_metadata(
     tmp_path: Path,
     package_record: PackageRecord,
     sidecar: bytes,
@@ -199,6 +206,32 @@ def test_install_verifier_does_not_fall_back_when_advertised_sidecar_is_missing(
         "sha256": hashlib.sha256(sidecar).hexdigest(),
         "size": len(sidecar),
     }
+    fetched: list[str] = []
+
+    def fetch(url: str, _max_bytes: int) -> bytes:
+        fetched.append(url)
+        return sidecar
+
+    verifier = InstallVerifier(
+        EnvironmentAuditor(
+            SigstoreSettings(),
+            FakeVerifier(verified_publication()),
+            transport="install",
+            sidecars=SidecarTransport(fetcher=fetch),
+        )
+    )
+
+    assert verifier.verify(package_record, tmp_path / FILENAME, DIGEST) is None
+    assert fetched == [f"{CHANNEL}/linux-64/{FILENAME}.v0.sigs"]
+
+
+def test_install_verifier_does_not_fall_back_when_advertised_sidecar_is_missing(
+    tmp_path: Path,
+    package_record: PackageRecord,
+    sidecar: bytes,
+) -> None:
+    sidecar_sha256 = hashlib.sha256(sidecar).hexdigest()
+    package_record.attestations_sha256 = sidecar_sha256
     fetched: list[str] = []
 
     def fetch(url: str, _max_bytes: int) -> bytes:
@@ -217,7 +250,7 @@ def test_install_verifier_does_not_fall_back_when_advertised_sidecar_is_missing(
     with pytest.raises(CondaVerificationError, match="missing-sidecar"):
         verifier.verify(package_record, tmp_path / FILENAME, DIGEST)
 
-    assert fetched == [f"{CHANNEL}/linux-64/{FILENAME}.sigs"]
+    assert fetched == [f"{CHANNEL}/linux-64/{FILENAME}.sigs.{sidecar_sha256}"]
 
 
 def test_install_verifier_rejects_explicit_local_package_without_fetching(

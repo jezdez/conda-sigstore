@@ -81,8 +81,8 @@ The integration must demonstrate that:
 
 1. valid, exact artifact-bound CEP 27 evidence succeeds
 2. artifact substitution fails before extraction
-3. descriptor-pinned sidecar substitution fails before parsing
-4. an absent descriptor selects required adjacent evidence
+3. repodata-hash-pinned sidecar substitution fails before parsing
+4. an absent `attestations_sha256` field selects required adjacent evidence
 5. a missing adjacent sidecar fails closed
 6. target-channel replay fails
 7. classic and libmamba solver paths cannot bypass verification
