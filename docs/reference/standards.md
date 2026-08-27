@@ -91,50 +91,67 @@ workflows.
 ## Draft repodata sidecar transport
 
 [conda/ceps#142](https://github.com/conda/ceps/pull/142) is an open proposal
-for serving attestation sidecars. The plugin calls it the `repodata` transport.
+for distributing attestation sidecars. This implementation follows proposal
+commit `bcfcf42990fb4e5446f33424353ba0b7c0e869f0` and calls the protocol the
+`repodata` transport.
 
-For `example-1.0-0.conda`, the proposed sidecar is
-`example-1.0-0.conda.sigs`. The package's repodata record advertises the exact
-sidecar SHA-256 and size:
+For `example-1.0-0.conda`, a channel serves the same exact sidecar bytes at two
+URLs:
+
+```text
+example-1.0-0.conda.sigs
+example-1.0-0.conda.sigs.<sha256>
+```
+
+The mutable `.sigs` URL supports generic tooling. Conda clients discover the
+sidecar through repodata and fetch only the immutable content-addressed URL.
+The package record contains one scalar field:
 
 ```json
 {
-  "attestations": {
-    "sha256": "<SHA-256 of exact sidecar bytes>",
-    "size": 12345
-  }
+  "attestations_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
 }
 ```
 
 The plugin applies these rules:
 
-- `attestations` contains exactly `sha256` and `size`
-- `sha256` is 64 lowercase hexadecimal characters
-- `size` is a positive integer within the configured sidecar limit
+- `attestations_sha256` is a string containing exactly 64 lowercase
+  hexadecimal characters
+- an invalid field is rejected before a sidecar URL is constructed
+- the client fetches `<artifact>.sigs.<attestations_sha256>`, never the mutable
+  `.sigs` URL
+- the configured implementation limit is enforced while the response streams
+- the exact sidecar SHA-256 is verified before JSON parsing
 - the sidecar is a nonempty JSON array of bundle objects
-- absence of the descriptor means that no `.sigs` sidecar is advertised
-- the client never probes for an undeclared `.sigs` file
-- exact response size and SHA-256 are checked before JSON parsing
+- absence of `attestations_sha256` means no sidecar is advertised, is not a
+  protocol error, and does not cause a request
 - the HTTP `Content-Type` is advisory and does not decide bundle validity
 
-A present descriptor is authoritative. Descriptor, retrieval, size, digest,
-container, or verification failure does not fall back to another transport.
+A present `attestations_sha256` field selects the repodata transport.
+Invalid-field, retrieval, streaming-limit, digest, container, or verification
+failure does not fall back to `.v0.sigs`.
 
-The proposal remains open, so this transport may require an incompatible
+Current conda `PackageRecord` objects and solver conversion paths do not
+preserve `attestations_sha256`. A conda change is therefore required before
+real solver, install, package-cache, prefix-record, and installed-audit flows
+can select this transport.
+
+The proposal remains Draft, so this transport may require an incompatible
 change before a stable release.
 
 ## Prefix.dev compatibility transport
 
 The current Prefix.dev producer path used by Pixi, Rattler-Build, and
 `rattler_upload` publishes `<artifact>.v0.sigs` as a JSON array of Bundle v0.3
-objects. Existing Prefix.dev channels do not advertise the sidecar hash and
-size in repodata.
+objects. Existing Prefix.dev channels do not advertise `attestations_sha256`
+in repodata.
 
 Explicit `.v0.sigs` input keeps the weaker discovery and integrity model
 visible in verification and audit commands. The opt-in install verifier also
 uses this deterministic adjacent name when the selected repodata record has no
-descriptor. It first binds the signed CEP 27 statement to the package SHA-256
-supplied by conda.
+`attestations_sha256` field. That fallback is plugin policy outside PR 142, not
+an older revision of its transport. It first binds the signed CEP 27 statement
+to the package SHA-256 supplied by conda.
 
 Public client behavior does not establish whether the proprietary Prefix.dev
 server compares a bundle signer with the upload identity. The plugin reports

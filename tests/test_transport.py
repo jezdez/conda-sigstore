@@ -10,7 +10,6 @@ import conda.gateways.connection.session
 import pytest
 
 from conda_sigstore.cache import DigestCache
-from conda_sigstore.evidence import AttestationDescriptor
 from conda_sigstore.exceptions import TransportError
 from conda_sigstore.transport import SidecarTransport
 
@@ -94,6 +93,7 @@ def sidecar_bytes() -> bytes:
 
 def test_repodata_fetches_only_advertised_integrity_bound_sidecar() -> None:
     body = sidecar_bytes()
+    digest = hashlib.sha256(body).hexdigest()
     seen: list[tuple[str, int]] = []
 
     def fetch(url: str, limit: int) -> bytes:
@@ -102,49 +102,74 @@ def test_repodata_fetches_only_advertised_integrity_bound_sidecar() -> None:
 
     sidecar = SidecarTransport(max_bytes=1024, fetcher=fetch).load_repodata(
         "https://user:secret@EXAMPLE.org/channel/pkg-1-0.conda?token=x#sha256=abc",
-        AttestationDescriptor(hashlib.sha256(body).hexdigest(), len(body)),
+        digest,
     )
-    expected_url = "https://user:secret@EXAMPLE.org/channel/pkg-1-0.conda.sigs?token=x"
+    expected_url = (
+        f"https://user:secret@EXAMPLE.org/channel/pkg-1-0.conda.sigs.{digest}?token=x"
+    )
     assert seen == [(expected_url, 1024)]
     assert len(sidecar.bundles) == 1
     assert not sidecar.prefix_sidecar
 
 
-def test_repodata_refuses_oversized_descriptor_before_fetch() -> None:
-    called = False
-
-    def fetch(url: str, limit: int) -> bytes:
-        nonlocal called
-        called = True
-        return b""
-
-    descriptor = AttestationDescriptor("ab" * 32, 11)
-    with pytest.raises(TransportError, match="exceeds") as raised:
-        SidecarTransport(max_bytes=10, fetcher=fetch).load_repodata(
-            "https://example.org/pkg-1-0.conda",
-            descriptor,
-        )
-    assert raised.value.code == "sidecar-too-large"
-    assert not called
-
-
 @pytest.mark.parametrize(
-    ("change", "code"),
+    "advertised_sha256",
     [
-        (lambda body: body[:-1], "size-mismatch"),
-        (lambda body: b"x" * len(body), "digest-mismatch"),
+        None,
+        1,
+        "AB" * 32,
+        "ab" * 31,
+        "ab" * 32 + "a",
+        "gg" * 32,
+        "ab" * 31 + "a/",
+        "ab" * 31 + "a?",
+        "ab" * 31 + "a#",
     ],
-    ids=("size", "digest"),
+    ids=(
+        "null",
+        "integer",
+        "uppercase",
+        "short",
+        "long",
+        "non-hexadecimal",
+        "path-separator",
+        "query-delimiter",
+        "fragment-delimiter",
+    ),
 )
-def test_repodata_rejects_size_or_digest_mismatch(change, code: str) -> None:
-    body = sidecar_bytes()
-    descriptor = AttestationDescriptor(hashlib.sha256(body).hexdigest(), len(body))
+def test_repodata_rejects_invalid_advertised_sha256_before_fetch(
+    advertised_sha256: object,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        SidecarTransport,
+        "sidecar_url",
+        staticmethod(
+            lambda *_args: pytest.fail(
+                "invalid attestations_sha256 must be rejected before URL construction"
+            )
+        ),
+    )
     with pytest.raises(TransportError) as raised:
-        SidecarTransport(fetcher=lambda url, limit: change(body)).load_repodata(
+        SidecarTransport(
+            fetcher=lambda *_args: pytest.fail(
+                "invalid attestations_sha256 must be rejected before fetch"
+            )
+        ).load_repodata(
             "https://example.org/pkg-1-0.conda",
-            descriptor,
+            advertised_sha256,
         )
-    assert raised.value.code == code
+    assert raised.value.code == "invalid-attestations-sha256"
+
+
+def test_repodata_rejects_digest_mismatch() -> None:
+    body = sidecar_bytes()
+    with pytest.raises(TransportError) as raised:
+        SidecarTransport(fetcher=lambda _url, _limit: body).load_repodata(
+            "https://example.org/pkg-1-0.conda",
+            "ab" * 32,
+        )
+    assert raised.value.code == "digest-mismatch"
 
 
 def test_repodata_fetches_when_cache_read_fails(
@@ -152,7 +177,7 @@ def test_repodata_fetches_when_cache_read_fails(
     tmp_path,
 ) -> None:
     body = sidecar_bytes()
-    descriptor = AttestationDescriptor(hashlib.sha256(body).hexdigest(), len(body))
+    digest = hashlib.sha256(body).hexdigest()
     cache = DigestCache(tmp_path / "cache")
     fetched: list[str] = []
 
@@ -172,11 +197,11 @@ def test_repodata_fetches_when_cache_read_fails(
         cache=cache,
     ).load_repodata(
         "https://example.org/pkg-1-0.conda",
-        descriptor,
+        digest,
     )
 
-    assert fetched == ["https://example.org/pkg-1-0.conda.sigs"]
-    assert sidecar.sha256 == descriptor.sha256
+    assert fetched == [f"https://example.org/pkg-1-0.conda.sigs.{digest}"]
+    assert sidecar.sha256 == digest
 
 
 def test_repodata_ignores_cache_write_failure(
@@ -184,7 +209,7 @@ def test_repodata_ignores_cache_write_failure(
     tmp_path,
 ) -> None:
     body = sidecar_bytes()
-    descriptor = AttestationDescriptor(hashlib.sha256(body).hexdigest(), len(body))
+    digest = hashlib.sha256(body).hexdigest()
     cache = DigestCache(tmp_path / "cache")
 
     def fail_cache_write(*_args, **_kwargs):
@@ -192,15 +217,50 @@ def test_repodata_ignores_cache_write_failure(
 
     monkeypatch.setattr(cache, "store_sidecar", fail_cache_write)
 
-    sidecar = SidecarTransport(
+    transport = SidecarTransport(
         fetcher=lambda _url, _limit: body,
         cache=cache,
+    )
+    sidecar = transport.load_repodata(
+        "https://example.org/pkg-1-0.conda",
+        digest,
+    )
+    transport.store_repodata(sidecar)
+
+    assert sidecar.sha256 == digest
+
+
+def test_repodata_does_not_cache_before_bundle_verification(tmp_path) -> None:
+    body = sidecar_bytes()
+    digest = hashlib.sha256(body).hexdigest()
+    cache = DigestCache(tmp_path / "cache")
+
+    SidecarTransport(
+        cache=cache,
+        fetcher=lambda _url, _limit: body,
     ).load_repodata(
         "https://example.org/pkg-1-0.conda",
-        descriptor,
+        digest,
     )
 
-    assert sidecar.sha256 == descriptor.sha256
+    assert cache.load_sidecar(digest) is None
+
+
+def test_repodata_uses_cached_sidecar_without_fetching(tmp_path) -> None:
+    body = sidecar_bytes()
+    digest = hashlib.sha256(body).hexdigest()
+    cache = DigestCache(tmp_path / "cache")
+    cache.store_sidecar(body)
+
+    sidecar = SidecarTransport(
+        cache=cache,
+        fetcher=lambda *_args: pytest.fail("cached sidecar must be reused"),
+    ).load_repodata(
+        "https://example.org/pkg-1-0.conda",
+        digest,
+    )
+
+    assert sidecar.sha256 == digest
 
 
 def test_prefix_sidecar_is_explicit_and_unpinned() -> None:
@@ -239,11 +299,10 @@ def test_bundle_input_labels_prefix_sidecar(tmp_path) -> None:
 
 def test_sidecar_must_be_nonempty_bundle_array() -> None:
     body = b"[]"
-    descriptor = AttestationDescriptor(hashlib.sha256(body).hexdigest(), len(body))
     with pytest.raises(TransportError, match="nonempty JSON array"):
         SidecarTransport(fetcher=lambda url, limit: body).load_repodata(
             "https://example.org/pkg-1-0.conda",
-            descriptor,
+            hashlib.sha256(body).hexdigest(),
         )
 
 
@@ -253,12 +312,11 @@ def test_sidecar_rejects_nonobject_bundle_elements() -> None:
         {"mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json"},
     ]
     body = json.dumps(bundles).encode()
-    descriptor = AttestationDescriptor(hashlib.sha256(body).hexdigest(), len(body))
 
     with pytest.raises(TransportError, match="bundle objects"):
         SidecarTransport(fetcher=lambda url, limit: body).load_repodata(
             "https://example.org/pkg-1-0.conda",
-            descriptor,
+            hashlib.sha256(body).hexdigest(),
         )
 
 
@@ -270,12 +328,10 @@ def test_sidecar_rejects_nonobject_bundle_elements() -> None:
     ],
 )
 def test_sidecar_requires_strict_utf8_json(body: bytes, message: str) -> None:
-    descriptor = AttestationDescriptor(hashlib.sha256(body).hexdigest(), len(body))
-
     with pytest.raises(TransportError, match=message):
         SidecarTransport(fetcher=lambda url, limit: body).load_repodata(
             "https://example.org/pkg-1-0.conda",
-            descriptor,
+            hashlib.sha256(body).hexdigest(),
         )
 
 
@@ -385,7 +441,7 @@ def test_retrieval_error_redacts_credentials_and_formats_ipv6(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     body = sidecar_bytes()
-    descriptor = AttestationDescriptor(hashlib.sha256(body).hexdigest(), len(body))
+    digest = hashlib.sha256(body).hexdigest()
     artifact_url = (
         "https://user:secret@[2001:db8::1]:8443/t/super-secret/channel/"
         "pkg-1-0.conda?auth=value"
@@ -411,12 +467,13 @@ def test_retrieval_error_redacts_credentials_and_formats_ipv6(
     )
 
     with pytest.raises(TransportError) as raised:
-        SidecarTransport().load_repodata(artifact_url, descriptor)
+        SidecarTransport().load_repodata(artifact_url, digest)
 
     message = str(raised.value)
     assert raised.value.__cause__ is None
     assert message == (
-        "could not retrieve https://[2001:db8::1]:8443/pkg-1-0.conda.sigs (OSError)"
+        "could not retrieve https://[2001:db8::1]:8443/"
+        f"pkg-1-0.conda.sigs.{digest} (OSError)"
     )
     for secret in ("user", "secret", "super-secret", "auth", "value"):
         assert secret not in message

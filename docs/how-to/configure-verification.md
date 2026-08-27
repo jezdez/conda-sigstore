@@ -34,8 +34,14 @@ Remove-Item Env:CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE
 ::::
 
 Replace `PACKAGE` with a package from a channel that serves valid adjacent
-evidence or a repodata-advertised sidecar. Missing or invalid evidence blocks
-the package before extraction.
+Prefix.dev evidence or a PR 142 content-addressed sidecar advertised through
+`attestations_sha256`. Missing or invalid evidence blocks the package before
+extraction.
+
+Current conda `PackageRecord` objects and solver conversion paths do not
+preserve `attestations_sha256`. Real solver and install flows need a conda
+change before they can select the PR 142 sidecar. Until then, enforcement can
+use only the separate adjacent Prefix.dev `.v0.sigs` compatibility path.
 
 ## Enable enforcement persistently
 

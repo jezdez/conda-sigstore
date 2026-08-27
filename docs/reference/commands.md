@@ -28,8 +28,10 @@ It rehashes the package before committing the output so a package changed
 during the OIDC and signing flow cannot produce a successful command.
 
 The output is a single bundle object. Channel tooling wraps one or more
-complete bundle objects in the JSON array served as `<PACKAGE>.sigs` or, for
-the current Prefix.dev compatibility transport, `<PACKAGE>.v0.sigs`.
+complete bundle objects in the JSON array served byte-for-byte at mutable
+`<PACKAGE>.sigs` and immutable `<PACKAGE>.sigs.<sha256>` for the PR 142
+transport. The current Prefix.dev compatibility transport instead uses
+`<PACKAGE>.v0.sigs`.
 
 ## `conda sigstore verify`
 
@@ -109,12 +111,17 @@ conda's JSON error reporter for command setup failures. `--verbose` controls
 conda logging. `--quiet` controls conda progress output, although this command
 does not create a progress bar.
 
-By default, audit reads only repodata-advertised `.sigs` sidecars. The package
-record must preserve an `attestations` descriptor with the exact sidecar
-SHA-256 and size. Missing descriptors are not probed. Released conda versions
-do not preserve that proposed field through every solver, cache, and prefix
-record path, so an audit can report `missing` even when a channel serves a
-sidecar.
+By default, audit reads only repodata-advertised immutable sidecars. The
+package record must preserve `attestations_sha256` as exactly 64 lowercase
+hexadecimal characters. The client derives
+`<artifact>.sigs.<attestations_sha256>`, applies its configured streaming limit,
+verifies the exact SHA-256, and only then parses the sidecar. An absent field is
+not probed and reports `missing`.
+
+Current conda `PackageRecord` objects and solver conversion paths do not
+preserve `attestations_sha256`. Real installed-environment audits therefore
+need a conda change before they can select the PR 142 transport. An audit can
+report `missing` even when a channel serves the immutable sidecar.
 
 `--prefix-sidecars` explicitly selects Prefix.dev's current, repodata-unpinned
 `.v0.sigs` convention. It never runs as an automatic audit fallback.
@@ -140,5 +147,9 @@ CONDA_PLUGINS_CONDA_SIGSTORE_ENFORCE=true conda install PACKAGE
 ```
 
 Enabled verification rejects a package unless its selected evidence verifies.
+The PR 142 path also requires conda to preserve `attestations_sha256` on the
+selected `PackageRecord`. Until conda adds that support, solver and install
+flows select the separate adjacent Prefix.dev compatibility path when the field
+is absent.
 See [Upstream integration contracts](upstream-contracts.md) for the hook and
 evidence-selection rules.

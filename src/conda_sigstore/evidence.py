@@ -23,38 +23,6 @@ def validate_sha256(value: object, *, field_name: str = "sha256") -> str:
 
 
 @dataclass(frozen=True, slots=True)
-class AttestationDescriptor:
-    """The draft integrity descriptor stored in repodata."""
-
-    sha256: str
-    size: int
-
-    def __post_init__(self) -> None:
-        if isinstance(self.sha256, str) and self.sha256 != self.sha256.lower():
-            raise ValueError("attestation sha256 must use lowercase hexadecimal")
-        object.__setattr__(self, "sha256", validate_sha256(self.sha256))
-        if (
-            isinstance(self.size, bool)
-            or not isinstance(self.size, int)
-            or self.size < 1
-        ):
-            raise ValueError("attestation size must be a positive integer")
-
-    @classmethod
-    def from_mapping(cls, value: Mapping[str, object]) -> AttestationDescriptor:
-        """Parse a descriptor without silently accepting missing fields."""
-        if set(value) != {"sha256", "size"}:
-            raise ValueError("attestations must contain exactly sha256 and size")
-        sha256 = value["sha256"]
-        size = value["size"]
-        if not isinstance(sha256, str):
-            raise ValueError("attestation sha256 must be a string")
-        if isinstance(size, bool) or not isinstance(size, int):
-            raise ValueError("attestation size must be an integer")
-        return cls(sha256=sha256, size=size)
-
-
-@dataclass(frozen=True, slots=True)
 class SignerIdentity:
     """The certificate SAN and OIDC issuer reported by Sigstore."""
 

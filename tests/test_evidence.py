@@ -3,7 +3,6 @@ from __future__ import annotations
 import pytest
 
 from conda_sigstore.evidence import (
-    AttestationDescriptor,
     SignerIdentity,
     VerificationResult,
     VerificationStatus,
@@ -20,11 +19,6 @@ def test_validate_sha256_normalizes_hexadecimal() -> None:
 def test_validate_sha256_rejects_non_hexadecimal(value: str) -> None:
     with pytest.raises(ValueError, match="64-character hexadecimal"):
         validate_sha256(value)
-
-
-def test_attestation_descriptor_requires_lowercase_digest() -> None:
-    with pytest.raises(ValueError, match="lowercase"):
-        AttestationDescriptor("AB" * 32, 1)
 
 
 def test_verification_json_reports_evidence_without_authorization() -> None:

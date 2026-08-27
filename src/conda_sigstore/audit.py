@@ -15,7 +15,6 @@ from conda.gateways.disk.read import compute_sum
 
 from .cache import DigestCache
 from .evidence import (
-    AttestationDescriptor,
     VerificationFailure,
     VerificationResult,
     VerificationStatus,
@@ -38,7 +37,7 @@ if TYPE_CHECKING:
 MAX_RENDERED_RECIPE_BYTES = 1024 * 1024
 MAX_PACKAGE_ARCHIVE_BYTES = 4 * 1024 * 1024 * 1024
 AuditTransport = Literal["repodata", "prefix", "install"]
-_NO_ATTESTATIONS = object()
+_NO_ATTESTATIONS_SHA256 = object()
 
 
 @dataclass(slots=True)
@@ -196,13 +195,14 @@ class EnvironmentAuditor:
             else (f"{channel}/{record.subdir}/{artifact_name}")
         )
         get_value = getattr(record, "get", None)
-        raw_descriptor = (
-            get_value("attestations", _NO_ATTESTATIONS)
+        attestations_sha256 = (
+            get_value("attestations_sha256", _NO_ATTESTATIONS_SHA256)
             if callable(get_value)
-            else getattr(record, "attestations", _NO_ATTESTATIONS)
+            else getattr(record, "attestations_sha256", _NO_ATTESTATIONS_SHA256)
         )
         prefix_sidecar = self.transport == "prefix" or (
-            self.transport == "install" and raw_descriptor is _NO_ATTESTATIONS
+            self.transport == "install"
+            and attestations_sha256 is _NO_ATTESTATIONS_SHA256
         )
         cache_scope = f"{channel}\0{artifact_name}"
         try:
@@ -216,7 +216,7 @@ class EnvironmentAuditor:
                     cache_scope=(cache_scope if self.transport == "install" else None),
                 )
             else:
-                if raw_descriptor is _NO_ATTESTATIONS:
+                if attestations_sha256 is _NO_ATTESTATIONS_SHA256:
                     return VerificationResult(
                         status=VerificationStatus.MISSING,
                         artifact=artifact_name,
@@ -229,17 +229,10 @@ class EnvironmentAuditor:
                             ),
                         ),
                     )
-                if not isinstance(raw_descriptor, Mapping):
-                    raise TransportError(
-                        "invalid-descriptor",
-                        "repodata attestations must be an object",
-                    )
-                descriptor = AttestationDescriptor.from_mapping(raw_descriptor)
-
                 assert self.sidecars is not None
                 sidecar = self.sidecars.load_repodata(
                     artifact_url,
-                    descriptor,
+                    attestations_sha256,
                 )
         except TransportError as exc:
             if exc.code == "missing-sidecar" and prefix_sidecar:
@@ -251,8 +244,7 @@ class EnvironmentAuditor:
                 "missing-sidecar",
                 "retrieval-failed",
                 "sidecar-too-large",
-                "size-mismatch",
-            }:
+            } or (exc.code == "invalid-sidecar" and not prefix_sidecar):
                 status = VerificationStatus.RETRIEVAL_FAILED
             else:
                 status = VerificationStatus.INVALID
@@ -264,14 +256,6 @@ class EnvironmentAuditor:
                 failures=(VerificationFailure(exc.code, str(exc)),),
                 prefix_sidecar=prefix_sidecar,
             )
-        except (TypeError, ValueError) as exc:
-            return VerificationResult(
-                status=VerificationStatus.INVALID,
-                artifact=artifact_name,
-                artifact_sha256=artifact_sha256,
-                channel=channel,
-                failures=(VerificationFailure("invalid-descriptor", str(exc)),),
-            )
         result = verify_bundles(
             sidecar,
             artifact_name=artifact_name,
@@ -279,7 +263,10 @@ class EnvironmentAuditor:
             verifier=self.verifier,
             channel=channel,
         )
-        if result.verified and self.transport == "install" and prefix_sidecar:
+        if result.verified and not prefix_sidecar:
+            assert self.sidecars is not None
+            self.sidecars.store_repodata(sidecar)
+        elif result.verified and self.transport == "install":
             assert self.sidecars is not None
             self.sidecars.store_prefix(artifact_sha256, cache_scope, sidecar)
         return result

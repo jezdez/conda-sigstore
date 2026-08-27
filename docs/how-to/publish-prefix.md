@@ -5,8 +5,9 @@ its Rattler-Build upload path. This guide shows the recommended automatic path,
 then the manual path for a bundle created by `conda-sigstore`.
 
 These are Prefix-specific producer workflows. Prefix.dev serves uploaded
-bundles through its `.v0.sigs` transport, not the draft repodata-advertised
-`.sigs` transport.
+bundles through its `.v0.sigs` transport, not the draft PR 142 transport with
+repodata `attestations_sha256` plus mutable `.sigs` and immutable
+`.sigs.<sha256>` endpoints.
 
 You need a Prefix.dev channel, a GitHub repository, a built conda package, and
 permission to configure Trusted Publishing for both services.

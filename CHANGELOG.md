@@ -13,9 +13,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
   sigstore-python.
 - Strict CEP 27 statement construction and validation for conda package
   publication attestations.
-- Support for the draft repodata-advertised `.sigs` transport proposed in
-  <https://github.com/conda/ceps/pull/142> and Prefix.dev `.v0.sigs` sidecar
-  discovery.
+- Support for the current draft repodata transport proposed in
+  <https://github.com/conda/ceps/pull/142>: a strict `attestations_sha256`
+  package-record field and immutable `.sigs.<sha256>` retrieval. Prefix.dev
+  `.v0.sigs` discovery remains a separate compatibility transport.
 - Offline verification and installed-environment, SLSA provenance, and recipe
   source-evidence auditing.
 - Scheduled live interoperability checks for the fixed Prefix.dev example and
@@ -36,8 +37,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - A direct, opt-in pre-extraction verifier for the package-verifier API in
   <https://github.com/conda/conda/pull/16518>, controlled by
   `plugins.conda_sigstore_enforce` and disabled by default. It accepts a
-  descriptor-pinned `.sigs` sidecar when advertised and otherwise requires the
-  deterministic adjacent `.v0.sigs` sidecar.
+  repodata-hash-pinned `.sigs.<sha256>` sidecar when advertised and otherwise
+  requires the deterministic adjacent `.v0.sigs` sidecar.
 - Rich terminal rendering for human-readable command output.
 - A tag-driven release workflow that builds once, records GitHub provenance,
   stages an immutable GitHub release, and publishes the same distributions to
@@ -45,6 +46,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Changed
 
+- Replaced the superseded nested `attestations` mapping, advertised-size
+  checks, and mutable `.sigs` client retrieval with the current
+  `attestations_sha256` and immutable endpoint defined by conda/ceps#142 at
+  commit `bcfcf42990fb4e5446f33424353ba0b7c0e869f0`.
 - Reorganized the documentation around runnable beginner workflows and exact
   operator and machine-readable reference contracts.
 - Made conda's standard `--console json` option select the same unstyled JSON

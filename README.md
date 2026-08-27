@@ -17,8 +17,15 @@ transport and source-evidence formats may still change incompatibly.
 - Audit installed packages for publication, provenance, and recipe source
   evidence.
 - Require valid CEP 27 evidence before conda extracts a package.
-- Read the draft repodata-advertised `.sigs` transport and Prefix.dev's current
-  `.v0.sigs` convention.
+- Read the draft repodata-advertised immutable `.sigs.<sha256>` transport and,
+  separately, Prefix.dev's current `.v0.sigs` convention.
+
+The draft transport follows
+[conda/ceps#142](https://github.com/conda/ceps/pull/142) at commit
+`bcfcf42990fb4e5446f33424353ba0b7c0e869f0`. Current conda `PackageRecord`
+objects do not preserve its `attestations_sha256` field, so real solver,
+install, and installed-environment audit flows require a corresponding conda
+change before they can select the draft transport.
 
 ## Install
 

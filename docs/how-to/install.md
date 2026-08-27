@@ -10,6 +10,10 @@ There is no supported end-user installation yet. `conda-sigstore` has no PyPI
 or conda release, and its install verifier requires the unreleased API in
 [conda/conda#16518](https://github.com/conda/conda/pull/16518). Do not overlay
 the draft conda branch onto a working base installation.
+
+The current conda `PackageRecord` model also does not preserve PR 142's
+`attestations_sha256` field. A corresponding conda change is required before
+real solver and install flows can select the draft content-addressed sidecar.
 :::
 
 ## Run the source preview

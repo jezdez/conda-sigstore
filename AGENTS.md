@@ -23,8 +23,8 @@
     statements.
   - `attestation.py` owns keyless signing and raw bundle output.
   - `transport.py` owns `SidecarTransport`, including bounded local,
-    repodata-advertised `.sigs`, and deterministic adjacent Prefix.dev sidecar
-    loading.
+    repodata-advertised immutable `.sigs.<sha256>`, and deterministic adjacent
+    Prefix.dev sidecar loading.
   - `verification.py` owns Sigstore cryptographic verification followed by CEP
     27 and artifact-binding checks.
   - `install.py` owns the opt-in adapter for conda's pre-extraction
@@ -203,9 +203,13 @@
   enforcement false by default. The locked developer environments use
   `jezdez/conda` branch `feature/package-verifiers` from conda/conda#16518.
 
-- Install enforcement must not depend on conda preserving an optional repodata
-  attestation descriptor. The selected package URL and conda-supplied artifact
-  SHA-256 are sufficient to locate and bind required adjacent evidence.
+- The current draft repodata transport requires conda to preserve
+  `attestations_sha256` on the selected package record. Current conda
+  `PackageRecord` and solver conversion paths do not preserve that field, so a
+  conda change is required before real solver, install, or installed-audit
+  flows can consume it. The selected package URL and conda-supplied artifact
+  SHA-256 remain sufficient only for the separate adjacent Prefix.dev
+  compatibility transport.
 
 - Treat JSON as an output contract. Machine-readable output must contain one
   stable, unstyled JSON value on stdout and must not be mixed with human status
@@ -239,22 +243,28 @@
   automatically disable those checks for converted PEP 740 or PyPI bundles
   without authenticated conversion provenance.
 
-- In the draft `repodata` transport, fetch `.sigs` only when repodata provides
-  an attestation descriptor. Enforce the advertised exact size and SHA-256
-  before parsing. Never probe for an undeclared sidecar. Refer to the proposal
-  as `conda/ceps#142` or the draft repodata transport.
+- In the draft `repodata` transport, fetch the immutable
+  `.sigs.<attestations_sha256>` URL only when repodata provides a valid
+  `attestations_sha256` field. Require exactly 64 lowercase hexadecimal
+  characters before constructing the URL, enforce the configured streaming
+  limit, and verify the advertised SHA-256 before parsing. Never probe for an
+  undeclared sidecar. The mutable `.sigs` URL is for servers and generic
+  tooling, not conda-client retrieval. Refer to the proposal as
+  `conda/ceps#142` or the draft repodata transport.
 
 - The opt-in install verifier must require one cryptographically valid, exact
-  artifact-bound CEP 27 statement. When repodata advertises a `.sigs`
-  descriptor, enforce its size and SHA-256 and never fall back after an error.
+  artifact-bound CEP 27 statement. When repodata advertises
+  `attestations_sha256`, fetch `.sigs.<attestations_sha256>`, enforce the
+  streaming limit and advertised SHA-256, and never fall back after an error.
   Otherwise require the deterministic adjacent `.v0.sigs` sidecar. Missing,
   unavailable, malformed, invalid, or nonmatching evidence must fail the
   package. This does not authorize the signer.
 
 - Keep Prefix.dev `.v0.sigs` audit support explicit through a direct bundle URL
   or the `--prefix-sidecars` flag. Strict install enforcement may require this
-  deterministic adjacent sidecar when no repodata descriptor exists. A
-  present but invalid descriptor is a hard failure, not a fallback trigger.
+  deterministic adjacent sidecar when `attestations_sha256` is absent. A
+  present but invalid `attestations_sha256` value is a hard failure, not a
+  fallback trigger.
 
 - Bound bytes before JSON, certificate, archive, or bundle parsing. Require a
   nonempty sidecar array of bundle objects and reject duplicate JSON keys where

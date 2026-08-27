@@ -100,8 +100,10 @@ selected package set.
 
 - Keep lockfile SHA-256 entries. They select exact bytes while Sigstore verifies
   signed evidence for those bytes.
-- Locked records that do not retain a repodata descriptor require adjacent
-  `<artifact>.v0.sigs` evidence.
+- Locked records that do not retain PR 142's `attestations_sha256` field require
+  adjacent `<artifact>.v0.sigs` evidence under the separate Prefix.dev
+  compatibility policy. Current conda `PackageRecord` objects do not preserve
+  that field.
 - Pip packages and unchanged prefix contents are not newly verified by this
   hook. With enforcement enabled, conda does not reuse an extracted-only cache
   entry. It finds or redownloads the archive and verifies it before extraction,

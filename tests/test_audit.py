@@ -651,14 +651,11 @@ def package_record(
         subdir="linux-64",
         url=f"{channel}/linux-64/pkg-1-0.conda",
         sha256=hashlib.sha256(archive.read_bytes()).hexdigest(),
-        attestations={
-            "sha256": hashlib.sha256(sidecar).hexdigest(),
-            "size": len(sidecar),
-        },
+        attestations_sha256=hashlib.sha256(sidecar).hexdigest(),
     )
 
 
-def test_repodata_audit_uses_pinned_cached_sidecar(
+def test_repodata_audit_caches_verified_sidecar_for_offline_reuse(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -669,7 +666,7 @@ def test_repodata_audit_uses_pinned_cached_sidecar(
     sidecar = json.dumps([{"bundle": "one"}]).encode()
     record = package_record(archive, sidecar)
     cache = DigestCache(tmp_path / "cache")
-    cache.store_sidecar(sidecar)
+    fetched: list[str] = []
     canonical = json.dumps({"bundle": "one"}, separators=(",", ":"), sort_keys=True)
     monkeypatch.setattr(
         EnvironmentAuditor,
@@ -696,15 +693,46 @@ def test_repodata_audit_uses_pinned_cached_sidecar(
         verifier,
         sidecars=SidecarTransport(
             cache=cache,
-            fetcher=lambda _url, _limit: pytest.fail("cached sidecar must be reused"),
+            fetcher=lambda url, _limit: fetched.append(url) or sidecar,
         ),
     )
 
     result = auditor.audit_record(record)
+    monkeypatch.setattr(
+        "conda.base.context.context",
+        SimpleNamespace(offline=True),
+    )
+    cached_result = auditor.audit_record(record)
 
     assert result.status is VerificationStatus.VERIFIED
+    assert cached_result.status is VerificationStatus.VERIFIED
     assert result.evidence[0].signer.identity == "publisher@example.org"
     assert result.to_dict()["authorization"] == "not-evaluated"
+    assert fetched == [
+        f"{record.url}.sigs.{record.attestations_sha256}",
+    ]
+    assert cache.load_sidecar(record.attestations_sha256) == sidecar
+
+
+def test_repodata_audit_does_not_cache_invalid_bundle(tmp_path: Path) -> None:
+    archive = tmp_path / "pkg-1-0.conda"
+    archive.write_bytes(b"package")
+    sidecar = json.dumps([{"bundle": "one"}]).encode()
+    record = package_record(archive, sidecar)
+    cache = DigestCache(tmp_path / "cache")
+    auditor = EnvironmentAuditor(
+        SigstoreSettings(),
+        FakeVerifier({}, {}),
+        sidecars=SidecarTransport(
+            cache=cache,
+            fetcher=lambda _url, _limit: sidecar,
+        ),
+    )
+
+    result = auditor.verify_record_evidence(record, record.sha256)
+
+    assert result.status is VerificationStatus.INVALID
+    assert cache.load_sidecar(record.attestations_sha256) is None
 
 
 def test_prefix_sidecar_audit_is_explicit_and_unpinned(
@@ -753,14 +781,14 @@ def test_prefix_sidecar_audit_is_explicit_and_unpinned(
     assert result.prefix_sidecar
 
 
-def test_repodata_audit_reports_missing_descriptor(
+def test_repodata_audit_reports_missing_advertisement(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     archive = tmp_path / "pkg-1-0.conda"
     archive.write_bytes(b"package")
     record = package_record(archive, b"[]")
-    del record.attestations
+    del record.attestations_sha256
     monkeypatch.setattr(
         EnvironmentAuditor,
         "retained_archive",
@@ -774,14 +802,43 @@ def test_repodata_audit_reports_missing_descriptor(
     assert result.failures[0].code == "missing-attestations"
 
 
+def test_repodata_audit_ignores_old_nested_attestations_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    archive = tmp_path / "pkg-1-0.conda"
+    archive.write_bytes(b"package")
+    record = package_record(archive, b"[]")
+    del record.attestations_sha256
+    record.attestations = {"sha256": "ab" * 32, "size": 2}
+    monkeypatch.setattr(
+        EnvironmentAuditor,
+        "retained_archive",
+        staticmethod(lambda _record: archive),
+    )
+    auditor = EnvironmentAuditor(
+        SigstoreSettings(),
+        FakeVerifier({}, {}),
+        sidecars=SidecarTransport(
+            fetcher=lambda *_args: pytest.fail(
+                "old nested attestations metadata must not be fetched"
+            )
+        ),
+    )
+
+    result = auditor.audit_record(record)
+
+    assert result.status is VerificationStatus.MISSING
+    assert result.failures[0].code == "missing-attestations"
+
+
 @pytest.mark.parametrize(
     ("transport", "code", "expected"),
     [
         ("repodata", "missing-sidecar", VerificationStatus.RETRIEVAL_FAILED),
         ("repodata", "retrieval-failed", VerificationStatus.RETRIEVAL_FAILED),
-        ("repodata", "size-mismatch", VerificationStatus.RETRIEVAL_FAILED),
         ("repodata", "digest-mismatch", VerificationStatus.RETRIEVAL_FAILED),
-        ("repodata", "invalid-sidecar", VerificationStatus.INVALID),
+        ("repodata", "invalid-sidecar", VerificationStatus.RETRIEVAL_FAILED),
         ("repodata", "sidecar-too-large", VerificationStatus.RETRIEVAL_FAILED),
         (
             "repodata",
@@ -789,6 +846,7 @@ def test_repodata_audit_reports_missing_descriptor(
             VerificationStatus.EVIDENCE_UNAVAILABLE,
         ),
         ("prefix", "missing-sidecar", VerificationStatus.MISSING),
+        ("prefix", "invalid-sidecar", VerificationStatus.INVALID),
     ],
 )
 def test_transport_failure_status_mapping(

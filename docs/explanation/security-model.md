@@ -5,7 +5,7 @@ The plugin verifies that a Sigstore-authenticated identity signed a strict CEP
 available evidence. An explicit verification may require an exact identity and
 issuer supplied independently by the operator. The plugin does not discover a
 channel's publisher delegation. Its opt-in install verifier requires valid
-descriptor-pinned or deterministic adjacent evidence before extraction, but
+repodata-hash-pinned or deterministic adjacent evidence before extraction, but
 does not authorize the authenticated signer.
 
 ## Protected assets
@@ -25,8 +25,15 @@ Cryptographic verification depends on:
 - supported transparency-log, checkpoint, and timestamp verification material
 - SHA-256 binding between the CEP 27 subject and package bytes
 
-Repodata can additionally bind exact `.sigs` bytes by SHA-256 and size. That
-binding is only as strong as the channel metadata path, including TLS.
+Repodata can additionally bind exact sidecar bytes through
+`attestations_sha256`. The immutable `.sigs.<sha256>` URL prevents cache races
+between sidecar revisions. This binding is only as strong as the channel
+metadata path, including TLS.
+
+Current conda `PackageRecord` objects do not preserve `attestations_sha256`, so
+the PR 142 transport cannot protect real solver, install, or installed-audit
+flows until conda adds that field. Prefix.dev `.v0.sigs` compatibility does not
+gain a repodata hash commitment from this proposal.
 
 A channel server's claim that an uploader was authorized is not currently a
 trust anchor. The observed public client paths are documented in
@@ -56,12 +63,12 @@ valid signature makes package contents safe.
 | Threat | Mitigation | Remaining risk |
 | --- | --- | --- |
 | Artifact substitution | CEP 27 subject SHA-256 must match exact artifact bytes | Failure of SHA-256 collision resistance |
-| Repodata sidecar substitution | Repodata advertises exact size and SHA-256 before parsing | Compromised or unauthenticated repodata |
+| Repodata sidecar substitution | The client validates `attestations_sha256`, fetches the immutable URL, enforces a streaming limit, and verifies the digest before parsing | Compromised or unauthenticated repodata |
 | Prefix.dev sidecar substitution | Strict mode fails on absence and requires at least one valid bundle to bind the exact package digest. An included `targetChannel` must match | Without a repodata commitment or independent identity requirement, channel admission remains the trust assumption |
 | Cross-channel replay | An included `targetChannel` must match the supplied channel | CEP 27 permits an absent target channel |
 | Transparency-log omission | Sigstore verification requires supported verification material | Trust-root or verifier compromise |
 | Converted PyPI bundle without canonical Rekor entry | Verification fails closed without authenticated conversion provenance | A future standard must define the exception |
-| Oversized or malformed input | Bounded reads, descriptor checks, duplicate-key rejection, and strict parsing | Limits must fit the deployment |
+| Oversized or malformed input | Bounded streaming reads, field validation, duplicate-key rejection, and strict parsing | Limits must fit the deployment |
 | Invalid sibling denial | One valid CEP 27 sibling is sufficient | A malformed container still fails |
 | Unrelated valid identity | An explicit verification can require an exact certificate identity and issuer | No channel standard distributes that requirement |
 | Time-of-check package replacement during signing | The artifact is rehashed before bundle output is committed | An authorized signer can still sign malicious bytes |
@@ -75,10 +82,11 @@ rotated root, incident, or verifier update without an authenticated update
 process.
 
 A local trust configuration is not self-authenticating. Operators must protect
-its distribution, freshness, and rollback behavior. Cached sidecars are
-rehashed and cryptographically reverified on read. Adjacent cache entries are
-used only offline. The artifact-to-sidecar cache reference is discovery data,
-not a verification receipt or authorization decision.
+its distribution, freshness, and rollback behavior. Sidecars enter the cache
+only after successful Sigstore and CEP 27 verification, then are rehashed and
+cryptographically reverified on every read. Adjacent cache entries are used
+only offline. The artifact-to-sidecar cache reference is discovery data, not a
+verification receipt or authorization decision.
 
 ## Non-goals
 
