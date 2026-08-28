@@ -71,8 +71,9 @@ conda sigstore --help
 replaces the pip bootstrap entry point inside `.pixi/envs/test` with conda's
 normal command wrappers. It does not initialize your shell profile.
 
-The locked environment uses `jezdez/conda` branch
-`feature/package-verifiers`, the branch behind the draft hook pull request.
+The locked environment builds a pinned revision from `jezdez/conda`'s
+`feature/package-verifiers` branch, the branch behind the draft hook pull
+request, as a conda package.
 
 Exit the preview shell when finished:
 

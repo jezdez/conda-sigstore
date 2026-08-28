@@ -50,10 +50,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Changed
 
-- Resolve the locked Sigstore runtime dependencies and conda-package-handling
-  from conda-forge instead of PyPI. Keep conda on the package-verifier Git
-  branch, keep conda-lockfiles and conda-workspaces from PyPI, and keep
-  conda-sigstore as an editable path dependency.
+- Resolve the locked Sigstore runtime dependencies, conda-package-handling,
+  conda-lockfiles, and conda-workspaces from conda-forge instead of PyPI. Keep
+  the package-verifier Git revision and fixed conda-spawn revision as
+  source-built conda dependencies, and keep conda-sigstore as an editable path
+  dependency.
 - Test every supported Python version on Windows ARM64 hosts using the locked
   win-64 environments through Prism while native win-arm64 dependencies remain
   unavailable on conda-forge.
