@@ -29,6 +29,9 @@ change before they can select the draft transport.
 
 ## Install
 
+conda-sigstore requires Python 3.11 or newer. Install it in the Python
+environment that owns the `conda` executable.
+
 conda 26.5 and newer include the
 [`conda-pypi`](https://conda.github.io/conda-pypi/quickstart/) plugin. For a
 standard conda installation, activate `base` and install 0.1.0 from PyPI as a
