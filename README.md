@@ -29,10 +29,20 @@ change before they can select the draft transport.
 
 ## Install
 
-Install 0.1.0 from PyPI into the environment that owns the `conda` executable.
-The [installation guide](https://jezdez.github.io/conda-sigstore/how-to/install/)
-also documents the source preview and the separate requirements for install
-enforcement.
+conda 26.5 and newer include the
+[`conda-pypi`](https://conda.github.io/conda-pypi/quickstart/) plugin. For a
+standard conda installation, activate `base` and install 0.1.0 from PyPI as a
+conda package:
+
+```console
+conda activate base
+conda pypi install "conda-sigstore==0.1.0"
+```
+
+If `conda pypi` is not available, follow the
+[installation guide](https://jezdez.github.io/conda-sigstore/how-to/install/)
+to install the wheel with pip. The guide also documents the source preview and
+the separate requirements for install enforcement.
 
 ## Commands
 

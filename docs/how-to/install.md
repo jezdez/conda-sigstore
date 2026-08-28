@@ -4,9 +4,29 @@
 `conda` executable. A plugin installed in an unrelated environment is not
 discovered by that `conda` executable.
 
-## Install 0.1.0 from PyPI
+conda 26.5 and newer include the
+[`conda-pypi` plugin](https://conda.github.io/conda-pypi/quickstart/), which can
+download the published wheel from PyPI, convert it to a conda package, and
+install it into the environment that owns conda.
 
-Create a dedicated environment that contains both conda and the plugin:
+For a standard conda installation, activate `base` and install 0.1.0 from PyPI:
+
+```console
+conda activate base
+conda pypi install "conda-sigstore==0.1.0"
+conda sigstore --help
+```
+
+`conda pypi install` is pending removal in conda 27.9. If the command is not
+available, use the pip method below. The `conda-pypi` channel does not currently
+serve `conda-sigstore`.
+
+The help output should list `attest`, `verify`, and `audit`. Start with
+[Verify a public package](../tutorials/getting-started.md).
+
+## Install with pip
+
+Create a dedicated environment that contains conda, pip, and the plugin:
 
 ```console
 conda create --name conda-sigstore conda pip
@@ -18,9 +38,6 @@ conda sigstore --help
 The PyPI distribution does not install conda. If you instead add the plugin to
 an existing conda installation, run pip with that installation's Python
 interpreter.
-
-The help output should list `attest`, `verify`, and `audit`. Start with
-[Verify a public package](../tutorials/getting-started.md).
 
 :::{warning}
 The opt-in pre-extraction verifier requires the unreleased package-verifier API
