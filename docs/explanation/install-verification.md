@@ -102,8 +102,8 @@ setting and recovery controls belong in
 
 [conda/conda#16518](https://github.com/conda/conda/pull/16518) provides the
 pre-extraction verifier hook. This repository's locked developer environments
-use `jezdez/conda` branch `feature/package-verifiers`. No released conda
-version provides that API yet.
+build a pinned revision from `jezdez/conda`'s `feature/package-verifiers`
+branch as a conda package. No released conda version provides that API yet.
 
 The current conda `PackageRecord` model and solver conversion paths do not
 preserve PR 142's `attestations_sha256` field. A separate conda change is

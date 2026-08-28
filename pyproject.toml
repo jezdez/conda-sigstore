@@ -111,8 +111,10 @@ python-version = "3.11"
 [tool.pixi.workspace]
 channels = ["conda-forge"]
 platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
+preview = ["pixi-build"]
 
 [tool.pixi.dependencies]
+conda = { git = "https://github.com/jezdez/conda.git", rev = "76fc92c3781093e935a3fb93b41ef1b27a37c14c", package = { version = "26.7.2.dev71+g76fc92c37", build = { backend = { name = "pixi-build-python" }, config = { ignore-pypi-mapping = false, env = { SETUPTOOLS_SCM_PRETEND_VERSION = "26.7.2.dev71+g76fc92c37" } } } } }
 conda-package-handling = ">=2"
 cryptography = ">=42"
 menuinst = ">=2"
@@ -122,7 +124,6 @@ rich = ">=13"
 sigstore = ">=4.5,<5"
 
 [tool.pixi.pypi-dependencies]
-conda = {git = "https://github.com/jezdez/conda.git", branch = "feature/package-verifiers"}
 conda-sigstore = {path = ".", editable = true}
 
 [tool.pixi.feature.dev.dependencies]
@@ -130,13 +131,12 @@ ruff = ">=0.9"
 ty = ">=0.0.1a7"
 
 [tool.pixi.feature.test.dependencies]
+conda-lockfiles = ">=0.2.1"
+conda-spawn = { git = "https://github.com/conda/conda-spawn.git", rev = "c7e7971c9dcee50410a970743905f7d732cde1e4", package = { version = "0.1.1.dev26+gc7e7971c9", build = { backend = { name = "pixi-build-python" }, config = { ignore-pypi-mapping = false, env = { SETUPTOOLS_SCM_PRETEND_VERSION = "0.1.1.dev26+gc7e7971c9" } } } } }
+conda-workspaces = ">=0.8.0"
 pytest = ">=8.0"
 pytest-benchmark = ">=5.0"
 pytest-cov = ">=6.0"
-
-[tool.pixi.feature.test.pypi-dependencies]
-conda-lockfiles = ">=0.2.1"
-conda-workspaces = ">=0.8.0"
 
 [tool.pixi.feature.py311.dependencies]
 python = "3.11.*"

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import json
-from types import SimpleNamespace
 
-import conda.base.context
 import pytest
+from conda.base.context import reset_context
 
 import conda_sigstore.cli.audit as cli_audit
 from conda_sigstore.exceptions import CondaSigstoreError
@@ -29,11 +28,6 @@ def test_audit_uses_explicit_prefix_sidecars(
             return report
 
     monkeypatch.setattr(cli_audit, "EnvironmentAuditor", FakeAuditor)
-    monkeypatch.setattr(
-        conda.base.context,
-        "context",
-        SimpleNamespace(target_prefix=target),
-    )
     args = sigstore_parser.parse_args(
         [
             "audit",
@@ -44,6 +38,8 @@ def test_audit_uses_explicit_prefix_sidecars(
             *output_option,
         ]
     )
+    monkeypatch.setenv("CONDA_PREFIX", str(target))
+    reset_context(argparse_args=args)
 
     assert cli_audit.execute_audit(args, console=rich_console) == 0
     captured_output = capsys.readouterr()
@@ -94,12 +90,9 @@ def test_audit_human_output_uses_injected_console(
             return report
 
     monkeypatch.setattr(cli_audit, "EnvironmentAuditor", FakeAuditor)
-    monkeypatch.setattr(
-        conda.base.context,
-        "context",
-        SimpleNamespace(target_prefix=tmp_path),
-    )
     args = sigstore_parser.parse_args(["audit", "--prefix", str(tmp_path)])
+    monkeypatch.setenv("CONDA_PREFIX", str(tmp_path))
+    reset_context(argparse_args=args)
 
     assert cli_audit.execute_audit(args, console=rich_console) == 0
     output = rich_console.file.getvalue()

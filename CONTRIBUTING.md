@@ -11,6 +11,15 @@ development environments:
 pixi install --locked --all
 ```
 
+The locked environments build a pinned revision from `jezdez/conda`'s
+`feature/package-verifiers` branch as a conda package so the tests exercise the
+API proposed in conda/conda#16518.
+The test environments install `conda-lockfiles` and `conda-workspaces` from
+conda-forge against that source-built conda package. Until
+[conda-spawn#70](https://github.com/conda/conda-spawn/issues/70) is released,
+the test environments also build the fixed conda-spawn `main` source as a
+conda package.
+
 Run the focused checks while developing:
 
 ```console

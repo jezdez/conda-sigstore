@@ -20,8 +20,9 @@ proposals.
 
 The plugin registers `conda_package_verifiers` directly against the draft API
 in [conda/conda#16518](https://github.com/conda/conda/pull/16518). The locked
-developer environments use `jezdez/conda` branch
-`feature/package-verifiers`. Released conda versions do not provide this hook.
+developer environments build a pinned revision from `jezdez/conda`'s
+`feature/package-verifiers` branch as a conda package. Released conda versions
+do not provide this hook.
 
 The hook is disabled unless `plugins.conda_sigstore_enforce` is true. When
 enabled, conda invokes the named verifier after validating the package size and
