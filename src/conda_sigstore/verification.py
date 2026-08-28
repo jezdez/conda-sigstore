@@ -5,7 +5,7 @@ from __future__ import annotations
 import hmac
 import json
 from dataclasses import dataclass, replace
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import cache
 from threading import Lock
 from typing import TYPE_CHECKING, Protocol
@@ -157,7 +157,7 @@ class SigstoreBundleMaterial:
             try:
                 timestamp = int(entry["integratedTime"])
                 result.append(
-                    datetime.fromtimestamp(timestamp, timezone.utc)
+                    datetime.fromtimestamp(timestamp, UTC)
                     .isoformat()
                     .replace("+00:00", "Z")
                 )
@@ -179,11 +179,9 @@ class SigstoreBundleMaterial:
                 if not isinstance(generated, datetime):
                     continue
                 if generated.tzinfo is None:
-                    generated = generated.replace(tzinfo=timezone.utc)
+                    generated = generated.replace(tzinfo=UTC)
                 result.append(
-                    generated.astimezone(timezone.utc)
-                    .isoformat()
-                    .replace("+00:00", "Z")
+                    generated.astimezone(UTC).isoformat().replace("+00:00", "Z")
                 )
             except Exception:
                 continue

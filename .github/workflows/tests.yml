@@ -52,7 +52,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-minor: ["10", "11", "12", "13", "14"]
+        python-minor: ["11", "12", "13", "14"]
         exclude:
           - os: ubuntu-latest
             python-minor: "13"

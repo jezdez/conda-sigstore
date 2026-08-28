@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -39,7 +39,7 @@ class SignerIdentity:
         return {"identity": self.identity, "issuer": self.issuer}
 
 
-class VerificationStatus(str, Enum):
+class VerificationStatus(StrEnum):
     """Stable statuses used by human and JSON output."""
 
     VERIFIED = "verified"

@@ -20,7 +20,7 @@ pixi run --locked -e test bench
 pixi run --locked -e docs docs
 ```
 
-The test matrix covers Python 3.10 through 3.14. Run a specific environment
+The test matrix covers Python 3.11 through 3.14. Run a specific environment
 with `pixi run --locked -e test-py314 test`.
 
 ## Live interoperability

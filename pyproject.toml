@@ -12,7 +12,6 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -36,7 +35,7 @@ license = "BSD-3-Clause"
 maintainers = [{name = "Jannis Leidel", email = "jannis@leidel.info"}]
 name = "conda-sigstore"
 readme = {file = "README.md", content-type = "text/markdown"}
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 [project.entry-points.conda]
 conda-sigstore = "conda_sigstore.plugin"
@@ -88,7 +87,7 @@ testpaths = ["tests"]
 
 [tool.ruff]
 exclude = [".pixi", "src/conda_sigstore/_version.py"]
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 flake8-type-checking = {exempt-modules = [], strict = true}
@@ -107,7 +106,7 @@ select = [
 ]
 
 [tool.ty.environment]
-python-version = "3.10"
+python-version = "3.11"
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
@@ -115,7 +114,7 @@ platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
 
 [tool.pixi.dependencies]
 menuinst = ">=2"
-python = ">=3.10"
+python = ">=3.11"
 
 [tool.pixi.pypi-dependencies]
 conda = {git = "https://github.com/jezdez/conda.git", branch = "feature/package-verifiers"}
@@ -133,9 +132,6 @@ pytest-cov = ">=6.0"
 [tool.pixi.feature.test.pypi-dependencies]
 conda-lockfiles = ">=0.2.1"
 conda-workspaces = ">=0.8.0"
-
-[tool.pixi.feature.py310.dependencies]
-python = "3.10.*"
 
 [tool.pixi.feature.py311.dependencies]
 python = "3.11.*"
@@ -169,7 +165,6 @@ dev = {features = ["dev"], solve-group = "default"}
 docs = {features = ["docs"], solve-group = "default"}
 release = {features = ["release"], no-default-feature = true}
 test = {features = ["test"], solve-group = "default"}
-test-py310 = {features = ["test", "py310"], solve-group = "test-py310"}
 test-py311 = {features = ["test", "py311"], solve-group = "test-py311"}
 test-py312 = {features = ["test", "py312"], solve-group = "test-py312"}
 test-py313 = {features = ["test", "py313"], solve-group = "test-py313"}
