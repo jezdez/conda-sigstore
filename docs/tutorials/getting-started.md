@@ -7,8 +7,7 @@ not require a channel account, signing identity, or package build.
 
 You need:
 
-- `conda sigstore` from the [source preview](../how-to/install.md), or a future
-  supported installation
+- `conda sigstore` from the [installation guide](../how-to/install.md)
 - `curl`, or PowerShell's `Invoke-WebRequest`
 
 ## 1. Download the package and its evidence
