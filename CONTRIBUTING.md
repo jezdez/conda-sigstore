@@ -20,8 +20,11 @@ pixi run --locked -e test bench
 pixi run --locked -e docs docs
 ```
 
-The test matrix covers Python 3.11 through 3.14. Run a specific environment
-with `pixi run --locked -e test-py314 test`.
+The test matrix covers Python 3.11 through 3.14 on Ubuntu, macOS, Windows x64,
+and Windows ARM64. The Windows ARM64 jobs run the locked win-64 environments
+through Prism because conda-forge does not yet provide the complete native
+win-arm64 dependency chain. Run a specific environment with
+`pixi run --locked -e test-py314 test`.
 
 ## Live interoperability
 

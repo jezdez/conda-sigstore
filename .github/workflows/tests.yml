@@ -70,6 +70,31 @@ jobs:
         shell: bash
         run: pixi run --locked -e "$PIXI_ENVIRONMENT" test
 
+  windows-arm-tests:
+    name: windows-11-arm, Python 3.${{ matrix.python-minor }} (win-64 via Prism)
+    runs-on: windows-11-arm
+    env:
+      PIXI_ENVIRONMENT: test-py3${{ matrix.python-minor }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-minor: ["11", "12", "13", "14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+        with:
+          pixi-version: v0.76.1
+          run-install: false
+          cache: false
+      # The native win-arm64 dependency chain is incomplete on conda-forge.
+      # Windows 11 ARM runs the locked win-64 environment through Prism.
+      - name: Run tests
+        shell: pwsh
+        run: pixi run --locked --platform win-64 -e "$env:PIXI_ENVIRONMENT" test
+
   coverage:
     name: ubuntu-latest, Python 3.13
     runs-on: ubuntu-latest
