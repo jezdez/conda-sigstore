@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -119,6 +120,34 @@ def test_generic_statement_verification_rejects_invalid_payload(
 def certificate_material(extensions: Extensions) -> SigstoreBundleMaterial:
     return SigstoreBundleMaterial(
         SimpleNamespace(signing_certificate=SimpleNamespace(extensions=extensions)),
+    )
+
+
+def test_bundle_timestamps_normalize_tlog_and_naive_rfc3161_values() -> None:
+    bundle = SimpleNamespace(
+        to_json=lambda: json.dumps(
+            {
+                "verificationMaterial": {
+                    "tlogEntries": [{"integratedTime": "0"}],
+                }
+            }
+        ),
+        verification_material=SimpleNamespace(
+            timestamp_verification_data=SimpleNamespace(
+                rfc3161_timestamps=(
+                    SimpleNamespace(
+                        tst_info=SimpleNamespace(
+                            gen_time=datetime(2026, 8, 28, 10, 30),
+                        )
+                    ),
+                )
+            )
+        ),
+    )
+
+    assert SigstoreBundleMaterial(bundle).timestamps() == (
+        "1970-01-01T00:00:00Z",
+        "2026-08-28T10:30:00Z",
     )
 
 
