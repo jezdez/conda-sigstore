@@ -2,7 +2,8 @@
 
 `conda-sigstore` must be installed in the Python environment that owns the
 `conda` executable. A plugin installed in an unrelated environment is not
-discovered by that `conda` executable.
+discovered by that `conda` executable. The environment must use Python 3.11 or
+newer.
 
 conda 26.5 and newer include the
 [`conda-pypi` plugin](https://conda.github.io/conda-pypi/quickstart/), which can
@@ -29,7 +30,7 @@ The help output should list `attest`, `verify`, and `audit`. Start with
 Create a dedicated environment that contains conda, pip, and the plugin:
 
 ```console
-conda create --name conda-sigstore conda pip
+conda create --name conda-sigstore "python>=3.11" conda pip
 conda activate conda-sigstore
 python -m pip install "conda-sigstore==0.1.0"
 conda sigstore --help

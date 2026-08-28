@@ -7,7 +7,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-08-27
+## [0.1.0] - 2026-08-28
 
 ### Added
 
@@ -50,6 +50,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Changed
 
+- Raised the minimum supported Python version from 3.10 to 3.11 to match the
+  sigstore-python 4.5 dependency set available on conda-forge.
 - Replaced the superseded nested `attestations` mapping, advertised-size
   checks, and mutable `.sigs` client retrieval with the current
   `attestations_sha256` and immutable endpoint defined by conda/ceps#142 at
