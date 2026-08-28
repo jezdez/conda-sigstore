@@ -50,6 +50,13 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Changed
 
+- Resolve the locked Sigstore runtime dependencies and conda-package-handling
+  from conda-forge instead of PyPI. Keep conda on the package-verifier Git
+  branch, keep conda-lockfiles and conda-workspaces from PyPI, and keep
+  conda-sigstore as an editable path dependency.
+- Test every supported Python version on Windows ARM64 hosts using the locked
+  win-64 environments through Prism while native win-arm64 dependencies remain
+  unavailable on conda-forge.
 - Raised the minimum supported Python version from 3.10 to 3.11 to match the
   sigstore-python 4.5 dependency set available on conda-forge.
 - Replaced the superseded nested `attestations` mapping, advertised-size
