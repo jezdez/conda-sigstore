@@ -4,7 +4,7 @@ type: software
 title: conda-sigstore
 abstract: "Sigstore signing and verification for conda packages"
 version: 0.1.0
-date-released: 2026-08-28
+date-released: 2026-08-31
 authors:
   - family-names: Leidel
     given-names: Jannis

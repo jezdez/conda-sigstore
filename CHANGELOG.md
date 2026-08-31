@@ -7,12 +7,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
-### Changed
-
-- Use the released conda-spawn 0.2.0 package from conda-forge in the locked
-  test environments instead of building a pinned Git revision.
-
-## [0.1.0] - 2026-08-28
+## [0.1.0] - 2026-08-31
 
 ### Added
 
@@ -55,11 +50,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Changed
 
+- Use the released conda-spawn 0.2.0 package from conda-forge in the locked
+  test environments instead of building a pinned Git revision.
 - Resolve the locked Sigstore runtime dependencies, conda-package-handling,
   conda-lockfiles, and conda-workspaces from conda-forge instead of PyPI. Keep
-  the package-verifier Git revision and fixed conda-spawn revision as
-  source-built conda dependencies, and keep conda-sigstore as an editable path
-  dependency.
+  the package-verifier Git revision as a source-built conda dependency, and
+  keep conda-sigstore as an editable path dependency.
 - Test every supported Python version on Windows ARM64 hosts using the locked
   win-64 environments through Prism while native win-arm64 dependencies remain
   unavailable on conda-forge.
