@@ -132,7 +132,7 @@ ty = ">=0.0.1a7"
 
 [tool.pixi.feature.test.dependencies]
 conda-lockfiles = ">=0.2.1"
-conda-spawn = { git = "https://github.com/conda/conda-spawn.git", rev = "c7e7971c9dcee50410a970743905f7d732cde1e4", package = { version = "0.1.1.dev26+gc7e7971c9", build = { backend = { name = "pixi-build-python" }, config = { ignore-pypi-mapping = false, env = { SETUPTOOLS_SCM_PRETEND_VERSION = "0.1.1.dev26+gc7e7971c9" } } } } }
+conda-spawn = ">=0.2.0"
 conda-workspaces = ">=0.8.0"
 pytest = ">=8.0"
 pytest-benchmark = ">=5.0"
