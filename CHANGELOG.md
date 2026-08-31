@@ -7,6 +7,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Changed
+
+- Use the released conda-spawn 0.2.0 package from conda-forge in the locked
+  test environments instead of building a pinned Git revision.
+
 ## [0.1.0] - 2026-08-28
 
 ### Added
