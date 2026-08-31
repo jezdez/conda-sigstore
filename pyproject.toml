@@ -114,7 +114,7 @@ platforms = ["linux-64", "linux-aarch64", "osx-64", "osx-arm64", "win-64"]
 preview = ["pixi-build"]
 
 [tool.pixi.dependencies]
-conda = { git = "https://github.com/jezdez/conda.git", rev = "76fc92c3781093e935a3fb93b41ef1b27a37c14c", package = { version = "26.7.2.dev71+g76fc92c37", build = { backend = { name = "pixi-build-python" }, config = { ignore-pypi-mapping = false, env = { SETUPTOOLS_SCM_PRETEND_VERSION = "26.7.2.dev71+g76fc92c37" } } } } }
+conda = { git = "https://github.com/jezdez/conda.git", rev = "a31bd176009b931b32b8fb02f0105428f9714b31", package = { version = "26.7.2.dev77+ga31bd1760", build = { backend = { name = "pixi-build-python" }, config = { ignore-pypi-mapping = false, env = { SETUPTOOLS_SCM_PRETEND_VERSION = "26.7.2.dev77+ga31bd1760" } } } } }
 conda-package-handling = ">=2"
 cryptography = ">=42"
 menuinst = ">=2"
