@@ -80,7 +80,7 @@ sidecar and never fetches the mutable `.sigs` URL.
 ### Repodata field preservation
 
 The proposal in [conda/ceps#142](https://github.com/conda/ceps/pull/142)
-at commit `bcfcf42990fb4e5446f33424353ba0b7c0e869f0` defines the optional scalar
+at commit `241d1cf43f4db5af484be59ad0b840a1b9e5d616` defines the optional scalar
 `attestations_sha256` field on package records. It must contain exactly 64
 lowercase hexadecimal characters. To remain usable after a solve, the field
 must survive:
@@ -101,6 +101,7 @@ install, package-cache, prefix-record, and installed-audit paths cannot consume
 the PR 142 field. The separate Prefix.dev adjacent path does not require this
 field.
 
+(channel-sidecar-publication)=
 ### Channel sidecar publication
 
 `conda sigstore attest` emits one raw Bundle v0.3 object. It does not assemble
@@ -109,13 +110,24 @@ a sidecar array, modify repodata, or upload channel files.
 An implementation of the draft repodata transport would need to:
 
 - associate one or more complete bundles with an immutable package artifact
-- serialize the final nonempty bundle array once
+- include every accepted attestation in the next published sidecar, including
+  concurrent additions
+- preserve existing bundle bytes and acceptance order, appending newly accepted
+  bundles after them
+- serialize the final nonempty bundle array once while preserving existing
+  bundle bytes
 - calculate the SHA-256 from the exact serialized bytes
 - publish those bytes first at immutable `<artifact>.sigs.<sha256>`
 - update mutable `<artifact>.sigs` to the same exact bytes for generic tooling
 - place `attestations_sha256` in every relevant repodata representation only
-  after the immutable URL is available
+  after publishing the immutable sidecar and updating the mutable URL
 - retain old immutable URLs while the corresponding package remains available
+
+A channel without a record of acceptance order may instead sort bundles by the
+SHA-256 of their bytes. It must use that ordering consistently across all
+sidecar revisions for the package. Transparency-log indexes and timestamps must
+not be used as sort keys. The channel chooses how to collect and merge
+additions, but concurrent additions must not be lost.
 
 The exact field, endpoint, and container rules are in
 [Standards and formats](standards.md).

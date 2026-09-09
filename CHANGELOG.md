@@ -7,6 +7,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Changed
+
+- Updated the draft repodata transport documentation for the ordering and
+  concurrent publication requirements in conda/ceps#142. Clarified that bundle
+  positions identify evidence without affecting verification or signer matching.
+
 ## [0.1.0] - 2026-08-31
 
 ### Added
