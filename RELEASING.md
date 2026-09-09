@@ -19,7 +19,7 @@ The GitHub Actions environment `pypi` permits deployments only from version
 tags and requires maintainer approval. Immutable releases are enabled, so a
 published release tag and its assets cannot be changed.
 
-## Prepare 0.1.0
+## Prepare 0.1.1
 
 1. Update `CHANGELOG.md`, `CITATION.cff`, and installation documentation with
    the version and release date.
@@ -36,8 +36,8 @@ published release tag and its assets cannot be changed.
 5. Create and push an annotated bare version tag:
 
    ```console
-   git tag -a 0.1.0 -m "conda-sigstore 0.1.0"
-   git push origin 0.1.0
+   git tag -a 0.1.1 -m "conda-sigstore 0.1.1"
+   git push origin 0.1.1
    ```
 
 The tag starts this sequence:
@@ -58,17 +58,17 @@ GitHub's build provenance and PyPI's publish attestations:
 ```console
 set -euo pipefail
 release_check="$(mktemp -d)"
-gh release download 0.1.0 --repo jezdez/conda-sigstore \
+gh release download 0.1.1 --repo jezdez/conda-sigstore \
   --dir "$release_check/github"
 mkdir "$release_check/pypi"
 curl --fail --location --silent --show-error \
-  https://pypi.org/pypi/conda-sigstore/0.1.0/json \
+  https://pypi.org/pypi/conda-sigstore/0.1.1/json \
   --output "$release_check/pypi.json"
 wheel_url="$(jq -er \
-  '.urls[] | select(.filename == "conda_sigstore-0.1.0-py3-none-any.whl") | .url' \
+  '.urls[] | select(.filename == "conda_sigstore-0.1.1-py3-none-any.whl") | .url' \
   "$release_check/pypi.json")"
 sdist_url="$(jq -er \
-  '.urls[] | select(.filename == "conda_sigstore-0.1.0.tar.gz") | .url' \
+  '.urls[] | select(.filename == "conda_sigstore-0.1.1.tar.gz") | .url' \
   "$release_check/pypi.json")"
 if [[ "$wheel_url" != https://files.pythonhosted.org/* ]]; then
   echo "Unexpected PyPI wheel URL." >&2
@@ -79,15 +79,17 @@ if [[ "$sdist_url" != https://files.pythonhosted.org/* ]]; then
   exit 1
 fi
 curl --fail --location --silent --show-error "$wheel_url" \
-  --output "$release_check/pypi/conda_sigstore-0.1.0-py3-none-any.whl"
+  --output "$release_check/pypi/conda_sigstore-0.1.1-py3-none-any.whl"
 curl --fail --location --silent --show-error "$sdist_url" \
-  --output "$release_check/pypi/conda_sigstore-0.1.0.tar.gz"
-cmp "$release_check/github/conda_sigstore-0.1.0-py3-none-any.whl" \
-  "$release_check/pypi/conda_sigstore-0.1.0-py3-none-any.whl"
-cmp "$release_check/github/conda_sigstore-0.1.0.tar.gz" \
-  "$release_check/pypi/conda_sigstore-0.1.0.tar.gz"
-gh attestation verify "$release_check"/github/* \
-  --repo jezdez/conda-sigstore
+  --output "$release_check/pypi/conda_sigstore-0.1.1.tar.gz"
+cmp "$release_check/github/conda_sigstore-0.1.1-py3-none-any.whl" \
+  "$release_check/pypi/conda_sigstore-0.1.1-py3-none-any.whl"
+cmp "$release_check/github/conda_sigstore-0.1.1.tar.gz" \
+  "$release_check/pypi/conda_sigstore-0.1.1.tar.gz"
+for release_artifact in "$release_check"/github/*
+do
+  gh attestation verify "$release_artifact" --repo jezdez/conda-sigstore
+done
 pipx run --spec "pypi-attestations==0.0.30" pypi-attestations verify pypi \
   --repository https://github.com/jezdez/conda-sigstore \
   "$wheel_url"
@@ -103,7 +105,7 @@ plugin discovery:
 release_prefix="$(mktemp -d)"
 conda create --yes --prefix "$release_prefix" "conda=26.7.1" pip
 conda run --prefix "$release_prefix" python -m pip install --no-cache-dir \
-  "$release_check/pypi/conda_sigstore-0.1.0-py3-none-any.whl"
+  "$release_check/pypi/conda_sigstore-0.1.1-py3-none-any.whl"
 conda run --prefix "$release_prefix" python -m conda sigstore --help
 ```
 
@@ -116,7 +118,7 @@ If PyPI contains only one distribution, a missing attestation, an unexpected
 filename, or different bytes, leave the draft release private and prepare a
 new version. If both exact distributions and their attestations reached PyPI,
 compare them with the draft assets using the commands above, then publish the
-verified draft with `gh release edit 0.1.0 --repo jezdez/conda-sigstore --draft=false`
+verified draft with `gh release edit 0.1.1 --repo jezdez/conda-sigstore --draft=false`
 instead of rerunning the upload.
 
 If `Publish GitHub Release` alone fails after the PyPI job succeeds, rerun only

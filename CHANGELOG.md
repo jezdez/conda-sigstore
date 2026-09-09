@@ -7,11 +7,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-09
+
 ### Changed
 
 - Updated the draft repodata transport documentation for the ordering and
   concurrent publication requirements in conda/ceps#142. Clarified that bundle
   positions identify evidence without affecting verification or signer matching.
+- Updated the locked conda development package to
+  `b5dab4a46a650c6f0f82b2486993ee6891415deb` from conda/conda#16518.
 
 ## [0.1.0] - 2026-08-31
 
@@ -79,5 +83,6 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Expanded the live Prefix interoperability check into a real strict
   pre-extraction installation followed by an environment audit.
 
-[Unreleased]: https://github.com/jezdez/conda-sigstore/compare/0.1.0...HEAD
+[Unreleased]: https://github.com/jezdez/conda-sigstore/compare/0.1.1...HEAD
+[0.1.1]: https://github.com/jezdez/conda-sigstore/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/jezdez/conda-sigstore/releases/tag/0.1.0

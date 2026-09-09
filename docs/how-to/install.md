@@ -10,11 +10,11 @@ conda 26.5 and newer include the
 download the published wheel from PyPI, convert it to a conda package, and
 install it into the environment that owns conda.
 
-For a standard conda installation, activate `base` and install 0.1.0 from PyPI:
+For a standard conda installation, activate `base` and install 0.1.1 from PyPI:
 
 ```console
 conda activate base
-conda pypi install "conda-sigstore==0.1.0"
+conda pypi install "conda-sigstore==0.1.1"
 conda sigstore --help
 ```
 
@@ -32,7 +32,7 @@ Create a dedicated environment that contains conda, pip, and the plugin:
 ```console
 conda create --name conda-sigstore "python>=3.11" conda pip
 conda activate conda-sigstore
-python -m pip install "conda-sigstore==0.1.0"
+python -m pip install "conda-sigstore==0.1.1"
 conda sigstore --help
 ```
 

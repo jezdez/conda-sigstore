@@ -4,7 +4,7 @@
 It can also audit installed environments and, when explicitly enabled, reject a
 package before extraction when acceptable evidence is unavailable or invalid.
 
-The project is alpha software. Version 0.1.0 is distributed through PyPI. The
+The project is alpha software. Version 0.1.1 is distributed through PyPI. The
 opt-in install integration requires the unreleased package-verifier API in
 [conda/conda#16518](https://github.com/conda/conda/pull/16518), and draft
 transport and source-evidence formats may still change incompatibly.
@@ -22,7 +22,7 @@ transport and source-evidence formats may still change incompatibly.
 
 The draft transport follows
 [conda/ceps#142](https://github.com/conda/ceps/pull/142) at commit
-`bcfcf42990fb4e5446f33424353ba0b7c0e869f0`. Current conda `PackageRecord`
+`241d1cf43f4db5af484be59ad0b840a1b9e5d616`. Current conda `PackageRecord`
 objects do not preserve its `attestations_sha256` field, so real solver,
 install, and installed-environment audit flows require a corresponding conda
 change before they can select the draft transport.
@@ -34,12 +34,12 @@ environment that owns the `conda` executable.
 
 conda 26.5 and newer include the
 [`conda-pypi`](https://conda.github.io/conda-pypi/quickstart/) plugin. For a
-standard conda installation, activate `base` and install 0.1.0 from PyPI as a
+standard conda installation, activate `base` and install 0.1.1 from PyPI as a
 conda package:
 
 ```console
 conda activate base
-conda pypi install "conda-sigstore==0.1.0"
+conda pypi install "conda-sigstore==0.1.1"
 ```
 
 If `conda pypi` is not available, follow the
