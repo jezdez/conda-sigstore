@@ -151,13 +151,20 @@ def test_bundle_timestamps_normalize_tlog_and_naive_rfc3161_values() -> None:
     )
 
 
-def test_one_verified_bundle_suffices_despite_invalid_sibling() -> None:
+@pytest.mark.parametrize(
+    "bundles",
+    [("bad", "good"), ("good", "bad")],
+    ids=("invalid-first", "valid-first"),
+)
+def test_one_verified_bundle_suffices_despite_invalid_sibling(
+    bundles: tuple[str, ...],
+) -> None:
     payload = PublishStatement(FILENAME, DIGEST, CHANNEL).payload()
     verifier = FakeVerifier(
         {"bad": BundleVerificationError("bad signature"), "good": verified(payload)}
     )
     result = verify_bundles(
-        Sidecar("cd" * 32, ("bad", "good"), prefix_sidecar=True),
+        Sidecar("cd" * 32, bundles, prefix_sidecar=True),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=verifier,
@@ -165,9 +172,11 @@ def test_one_verified_bundle_suffices_despite_invalid_sibling() -> None:
     )
     assert result.status is VerificationStatus.VERIFIED
     assert result.evidence[0].verified
+    assert result.evidence[0].bundle_index == bundles.index("good")
     assert result.to_dict()["authorization"] == "not-evaluated"
     assert result.to_dict()["sidecar_sha256"] == "cd" * 32
     assert result.failures[0].code == "invalid-bundle"
+    assert result.failures[0].bundle_index == bundles.index("bad")
     assert result.prefix_sidecar
 
 
@@ -313,13 +322,20 @@ def test_bundle_certificate_accepts_v2_oidc_issuer() -> None:
     )
 
 
-def test_malformed_target_channel_does_not_hide_valid_sibling() -> None:
+@pytest.mark.parametrize(
+    "bundles",
+    [("bad", "good"), ("good", "bad")],
+    ids=("invalid-first", "valid-first"),
+)
+def test_malformed_target_channel_does_not_hide_valid_sibling(
+    bundles: tuple[str, ...],
+) -> None:
     malformed = PublishStatement(FILENAME, DIGEST).payload()
     malformed_value = json.loads(malformed)
     malformed_value["predicate"] = {"targetChannel": "https://[invalid"}
     good = PublishStatement(FILENAME, DIGEST, CHANNEL).payload()
     result = verify_bundles(
-        Sidecar("cd" * 32, ("bad", "good")),
+        Sidecar("cd" * 32, bundles),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=FakeVerifier(
@@ -333,6 +349,10 @@ def test_malformed_target_channel_does_not_hide_valid_sibling() -> None:
 
     assert result.status is VerificationStatus.VERIFIED
     assert result.failures[0].code == "invalid-cep27"
+    assert result.failures[0].bundle_index == bundles.index("bad")
+    assert {item.bundle_index for item in result.evidence if item.verified} == {
+        bundles.index("good")
+    }
 
 
 def test_valid_signature_with_wrong_artifact_is_invalid() -> None:
@@ -489,13 +509,29 @@ def test_any_authenticated_signer_is_reported_without_authorization_claim() -> N
     assert result.to_dict()["authorization"] == "not-evaluated"
 
 
-def test_explicit_identity_and_issuer_authorize_exact_signer() -> None:
+@pytest.mark.parametrize(
+    "bundles",
+    [("matching",), ("matching", "other"), ("other", "matching")],
+    ids=("single-signer", "matching-first", "matching-last"),
+)
+def test_explicit_identity_and_issuer_authorize_exact_signer(
+    bundles: tuple[str, ...],
+) -> None:
     payload = PublishStatement(FILENAME, DIGEST, CHANNEL).payload()
     result = verify_bundles(
-        Sidecar("cd" * 32, ("bundle",)),
+        Sidecar("cd" * 32, bundles),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
-        verifier=FakeVerifier({"bundle": verified(payload)}),
+        verifier=FakeVerifier(
+            {
+                "matching": verified(payload),
+                "other": CryptographicVerification(
+                    InTotoStatement.PAYLOAD_TYPE,
+                    payload,
+                    SignerIdentity("publisher@example.org", ISSUER),
+                ),
+            }
+        ),
         channel=CHANNEL,
         expected_signer=SignerIdentity(IDENTITY, ISSUER),
     )
@@ -503,6 +539,11 @@ def test_explicit_identity_and_issuer_authorize_exact_signer() -> None:
     assert result.status is VerificationStatus.VERIFIED
     assert result.authorization == "verified"
     assert result.to_dict()["authorization"] == "verified"
+    assert len(result.evidence) == len(bundles)
+    assert all(item.verified for item in result.evidence)
+    assert [(failure.code, failure.bundle_index) for failure in result.failures] == (
+        [("untrusted-identity", bundles.index("other"))] if "other" in bundles else []
+    )
 
 
 @pytest.mark.parametrize(
@@ -533,10 +574,17 @@ def test_explicit_identity_rejects_other_signer_without_hiding_evidence(
     assert result.failures[0].code == "untrusted-identity"
 
 
-def test_unavailable_sibling_takes_precedence_over_untrusted_identity() -> None:
+@pytest.mark.parametrize(
+    "bundles",
+    [("untrusted", "unavailable"), ("unavailable", "untrusted")],
+    ids=("untrusted-first", "unavailable-first"),
+)
+def test_unavailable_sibling_takes_precedence_over_untrusted_identity(
+    bundles: tuple[str, ...],
+) -> None:
     payload = PublishStatement(FILENAME, DIGEST, CHANNEL).payload()
     result = verify_bundles(
-        Sidecar("cd" * 32, ("untrusted", "unavailable")),
+        Sidecar("cd" * 32, bundles),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
         verifier=FakeVerifier(
@@ -550,11 +598,13 @@ def test_unavailable_sibling_takes_precedence_over_untrusted_identity() -> None:
     )
 
     assert result.status is VerificationStatus.EVIDENCE_UNAVAILABLE
+    assert result.authorization == "failed"
     assert result.evidence[0].verified
-    assert [failure.code for failure in result.failures] == [
-        "untrusted-identity",
-        "evidence-unavailable",
-    ]
+    assert result.evidence[0].bundle_index == bundles.index("untrusted")
+    assert {failure.code: failure.bundle_index for failure in result.failures} == {
+        "untrusted-identity": bundles.index("untrusted"),
+        "evidence-unavailable": bundles.index("unavailable"),
+    }
 
 
 def test_missing_offline_trust_material_is_evidence_unavailable() -> None:
@@ -571,7 +621,14 @@ def test_missing_offline_trust_material_is_evidence_unavailable() -> None:
     assert result.failures[0].code == "evidence-unavailable"
 
 
-def test_slsa_provenance_preserves_untrusted_signer_evidence() -> None:
+@pytest.mark.parametrize(
+    "bundles",
+    [("provenance",), ("publish", "provenance"), ("provenance", "publish")],
+    ids=("provenance-only", "publish-first", "publish-last"),
+)
+def test_slsa_provenance_preserves_untrusted_signer_evidence(
+    bundles: tuple[str, ...],
+) -> None:
     payload = json.dumps(
         {
             "_type": "https://in-toto.io/Statement/v1",
@@ -586,23 +643,41 @@ def test_slsa_provenance_preserves_untrusted_signer_evidence() -> None:
             },
         }
     ).encode()
+    expected_signer = SignerIdentity("publisher@example.org", ISSUER)
     result = verify_bundles(
-        Sidecar("cd" * 32, ("bundle",)),
+        Sidecar("cd" * 32, bundles),
         artifact_name=FILENAME,
         artifact_sha256=DIGEST,
-        verifier=FakeVerifier({"bundle": verified(payload)}),
-        expected_signer=SignerIdentity("publisher@example.org", ISSUER),
+        verifier=FakeVerifier(
+            {
+                "provenance": verified(payload),
+                "publish": CryptographicVerification(
+                    InTotoStatement.PAYLOAD_TYPE,
+                    PublishStatement(FILENAME, DIGEST).payload(),
+                    expected_signer,
+                ),
+            }
+        ),
+        expected_signer=expected_signer,
     )
-    assert result.status is VerificationStatus.INVALID
-    assert result.authorization == "failed"
-    assert result.evidence[0].verified
-    assert (
-        result.evidence[0].details["provenance"]["builder"]
-        == "https://example.org/builder"
+    assert result.status is (
+        VerificationStatus.VERIFIED
+        if "publish" in bundles
+        else VerificationStatus.INVALID
     )
-    assert [failure.code for failure in result.failures] == [
-        "untrusted-identity",
-        "missing-publish-attestation",
+    assert result.authorization == ("verified" if "publish" in bundles else "failed")
+    provenance = next(
+        item
+        for item in result.evidence
+        if item.predicate_type == SlsaProvenance.PREDICATE_TYPE
+    )
+    assert provenance.verified
+    assert provenance.bundle_index == bundles.index("provenance")
+    assert provenance.signer == SignerIdentity(IDENTITY, ISSUER)
+    assert provenance.details["provenance"]["builder"] == "https://example.org/builder"
+    assert [(failure.code, failure.bundle_index) for failure in result.failures] == [
+        ("untrusted-identity", bundles.index("provenance")),
+        *([] if "publish" in bundles else [("missing-publish-attestation", None)]),
     ]
 
 

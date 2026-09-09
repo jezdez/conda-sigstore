@@ -92,7 +92,7 @@ workflows.
 
 [conda/ceps#142](https://github.com/conda/ceps/pull/142) is an open proposal
 for distributing attestation sidecars. This implementation follows proposal
-commit `bcfcf42990fb4e5446f33424353ba0b7c0e869f0` and calls the protocol the
+commit `241d1cf43f4db5af484be59ad0b840a1b9e5d616` and calls the protocol the
 `repodata` transport.
 
 For `example-1.0-0.conda`, a channel serves the same exact sidecar bytes at two
@@ -123,6 +123,7 @@ The plugin applies these rules:
 - the configured implementation limit is enforced while the response streams
 - the exact sidecar SHA-256 is verified before JSON parsing
 - the sidecar is a nonempty JSON array of bundle objects
+- bundle position does not affect verification or signer matching
 - absence of `attestations_sha256` means no sidecar is advertised, is not a
   protocol error, and does not cause a request
 - the HTTP `Content-Type` is advisory and does not decide bundle validity
@@ -130,6 +131,16 @@ The plugin applies these rules:
 A present `attestations_sha256` field selects the repodata transport.
 Invalid-field, retrieval, streaming-limit, digest, container, or verification
 failure does not fall back to `.v0.sigs`.
+
+CEP 27 defines verification of publication statements, including filename and
+SHA-256 binding. The distribution proposal adds no verification rules. The
+reported `bundle_index` identifies evidence within the sidecar and implies no
+trust, freshness, or preference.
+
+The proposal also defines channel requirements for preserving accepted bundles
+and publishing concurrent additions. See
+[Channel sidecar publication](channel-sidecar-publication)
+for the ordering and publication rules.
 
 Current conda `PackageRecord` objects and solver conversion paths do not
 preserve `attestations_sha256`. A conda change is therefore required before

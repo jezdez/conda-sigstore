@@ -104,6 +104,11 @@ Every `evidence` item has these fields:
 | `timestamps` | array of strings | Reported verified Rekor integrated times and supported RFC 3161 times, normalized to UTC when possible |
 | `details` | object | Predicate-specific facts from one of the variants below |
 
+`bundle_index` identifies a bundle within the input sidecar for diagnostics.
+Its position implies no trust, freshness, or preference. Reordering bundles
+changes these indices and output order without changing verification or
+signer matching decisions.
+
 An evidence object appears only after Sigstore cryptographic verification has
 succeeded. `verified: false` means that the authenticated payload type,
 statement, predicate, or artifact binding was not accepted. It does not mean
