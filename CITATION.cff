@@ -3,8 +3,8 @@ message: "If you use conda-sigstore, cite the software and the release you used.
 type: software
 title: conda-sigstore
 abstract: "Sigstore signing and verification for conda packages"
-version: 0.1.0
-date-released: 2026-08-31
+version: 0.1.1
+date-released: 2026-09-09
 authors:
   - family-names: Leidel
     given-names: Jannis
