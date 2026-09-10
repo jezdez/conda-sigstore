@@ -26,9 +26,8 @@ Unknown fields are rejected. A configured `trust_config` path is expanded from
 `~` and must identify an existing regular file. The file is read with a 1 MiB
 limit before JSON parsing.
 
-Source auditing has separate package-controlled input limits. Retained package
-archives larger than 4 GiB and rendered recipes larger than 1 MiB are reported
-as unavailable evidence before parsing.
+Source auditing also enforces fixed archive, YAML, and declaration limits.
+See {ref}`source-audit-limits` for their values and result statuses.
 
 ## `trust_config` file contract
 

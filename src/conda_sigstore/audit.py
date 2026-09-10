@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import tempfile
-from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
@@ -22,7 +21,11 @@ from .evidence import (
 )
 from .exceptions import TransportError
 from .settings import SigstoreSettings
-from .source_attestations import SourceAttestationRequirement, resolve_embedded_file
+from .source_attestations import (
+    MAX_RENDERED_RECIPE_BYTES,
+    SourceAttestationRequirement,
+    resolve_embedded_file,
+)
 from .transport import (
     SidecarTransport,
     read_bounded_file,
@@ -34,7 +37,6 @@ if TYPE_CHECKING:
 
     from .verification import BundleVerifier
 
-MAX_RENDERED_RECIPE_BYTES = 1024 * 1024
 MAX_PACKAGE_ARCHIVE_BYTES = 4 * 1024 * 1024 * 1024
 AuditTransport = Literal["repodata", "prefix", "install"]
 _NO_ATTESTATIONS_SHA256 = object()
@@ -279,9 +281,9 @@ class EnvironmentAuditor:
         package_sha256: str | None,
     ) -> list[dict[str, object]]:
         """Audit draft source evidence from the verified package archive."""
-        from conda.common.serialize import yaml
-        from conda_package_handling.api import extract
         from ruamel.yaml import YAMLError
+
+        from .source_archive import SourceArchive
 
         if not package_verified or package_sha256 is None:
             return [
@@ -340,7 +342,11 @@ class EnvironmentAuditor:
                         "retained archive does not match the verified package digest"
                     )
                 extracted = root / "extracted"
-                extract(str(snapshot), dest_dir=str(extracted), components="info")
+                SourceArchive(snapshot, record.fn).extract_recipe(
+                    extracted,
+                    max_recipe_bytes=MAX_RENDERED_RECIPE_BYTES,
+                    max_bundle_bytes=self.settings.max_sidecar_bytes,
+                )
                 recipe = resolve_embedded_file(
                     extracted,
                     "info/recipe/rendered_recipe.yaml",
@@ -353,24 +359,20 @@ class EnvironmentAuditor:
                             "verification_scope": "draft-source-attestation",
                         }
                     ]
-                rendered_recipe = yaml.loads(
+                requirements = SourceAttestationRequirement.from_yaml(
                     read_bounded_file(
                         recipe,
                         MAX_RENDERED_RECIPE_BYTES,
                         description="rendered recipe",
                     ).decode("utf-8")
                 )
-                if not isinstance(rendered_recipe, Mapping):
-                    raise ValueError("rendered recipe must be an object")
                 return [
                     requirement.audit(
                         recipe.parent,
                         verifier=self.verifier,
                         max_bytes=self.settings.max_sidecar_bytes,
                     )
-                    for requirement in SourceAttestationRequirement.from_recipe(
-                        rendered_recipe
-                    )
+                    for requirement in requirements
                 ]
         except YAMLError:
             return [

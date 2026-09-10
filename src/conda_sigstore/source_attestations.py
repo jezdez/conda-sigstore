@@ -24,6 +24,14 @@ if TYPE_CHECKING:
 
     from .verification import BundleVerifier
 
+MAX_RECIPE_SOURCES = 100
+MAX_RENDERED_RECIPE_BYTES = 1024 * 1024
+MAX_SOURCE_PUBLISHERS = 16
+MAX_SOURCE_BUNDLES = 32
+MAX_RECIPE_DECLARATIONS = 256
+MAX_RECIPE_YAML_EVENTS = 10_000
+MAX_RECIPE_YAML_DEPTH = 32
+
 
 def resolve_embedded_file(root: Path, relative: str) -> Path | None:
     """Resolve a regular embedded file without following any symlink."""
@@ -160,6 +168,39 @@ class SourceAttestationRequirement:
     predicate_type: str | None
     bundles: tuple[EmbeddedSourceBundle, ...]
 
+    @classmethod
+    def from_yaml(cls, payload: str) -> tuple[SourceAttestationRequirement, ...]:
+        """Check YAML structure before constructing recipe declarations."""
+        from conda.common.serialize import yaml
+        from ruamel.yaml import YAML
+        from ruamel.yaml.events import (
+            AliasEvent,
+            CollectionEndEvent,
+            CollectionStartEvent,
+        )
+
+        if (
+            len(payload) > MAX_RENDERED_RECIPE_BYTES
+            or len(payload.encode("utf-8")) > MAX_RENDERED_RECIPE_BYTES
+        ):
+            raise ValueError("rendered recipe exceeds the YAML byte limit")
+        depth = 0
+        for count, event in enumerate(YAML(typ="base").parse(payload), 1):
+            if count > MAX_RECIPE_YAML_EVENTS:
+                raise ValueError("rendered recipe contains too many YAML events")
+            if isinstance(event, AliasEvent):
+                raise ValueError("rendered recipe YAML aliases are not supported")
+            if isinstance(event, CollectionStartEvent):
+                depth += 1
+                if depth > MAX_RECIPE_YAML_DEPTH:
+                    raise ValueError("rendered recipe YAML is nested too deeply")
+            elif isinstance(event, CollectionEndEvent):
+                depth -= 1
+        rendered = yaml.loads(payload)
+        if not isinstance(rendered, Mapping):
+            raise ValueError("rendered recipe must be an object")
+        return cls.from_recipe(rendered)
+
     @staticmethod
     def publisher(value: object) -> SignerIdentity:
         """Expand one explicit or draft shorthand publisher identity."""
@@ -212,6 +253,8 @@ class SourceAttestationRequirement:
         raw_publishers = raw_attestation.get("publishers")
         if not isinstance(raw_publishers, Sequence) or isinstance(raw_publishers, str):
             raise ValueError("attestation.publishers must be a list")
+        if len(raw_publishers) > MAX_SOURCE_PUBLISHERS:
+            raise ValueError("too many source attestation publishers")
         publishers = tuple(cls.publisher(item) for item in raw_publishers)
         if not publishers:
             raise ValueError("attestation.publishers must not be empty")
@@ -223,6 +266,8 @@ class SourceAttestationRequirement:
         raw_bundles = raw_attestation.get("verified", ())
         if not isinstance(raw_bundles, Sequence) or isinstance(raw_bundles, str):
             raise ValueError("attestation.verified must be a list")
+        if len(raw_bundles) > MAX_SOURCE_BUNDLES:
+            raise ValueError("too many source attestation bundles")
         return cls(
             source_index=source_index,
             source_sha256=validate_sha256(
@@ -249,6 +294,22 @@ class SourceAttestationRequirement:
             sources = raw_sources
         else:
             raise ValueError("recipe source must be an object or list")
+        if len(sources) > MAX_RECIPE_SOURCES:
+            raise ValueError("too many recipe sources")
+        declarations = 0
+        # Count alias occurrences before constructing any requirement objects.
+        for source in sources:
+            if not isinstance(source, Mapping):
+                continue
+            attestation = source.get("attestation")
+            if not isinstance(attestation, Mapping):
+                continue
+            for field in ("publishers", "verified"):
+                values = attestation.get(field, ())
+                if isinstance(values, Sequence) and not isinstance(values, str):
+                    declarations += len(values)
+            if declarations > MAX_RECIPE_DECLARATIONS:
+                raise ValueError("too many source attestation declarations in recipe")
         requirements: list[SourceAttestationRequirement] = []
         for source_index, source in enumerate(sources):
             if not isinstance(source, Mapping):

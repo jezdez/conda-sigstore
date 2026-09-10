@@ -72,7 +72,14 @@ valid signature makes package contents safe.
 | Invalid sibling denial | One valid CEP 27 sibling is sufficient | A malformed container still fails |
 | Unrelated valid identity | An explicit verification can require an exact certificate identity and issuer | No channel standard distributes that requirement |
 | Time-of-check package replacement during signing | The artifact is rehashed before bundle output is committed | An authorized signer can still sign malicious bytes |
-| Embedded source path escape | Bounded reads, path containment, and symlink rejection | Source evidence remains report-only |
+| Embedded source path escape | Only regular recipe and bundle files are copied from a digest-checked snapshot. Unsafe archive paths and evidence paths with links, special files, or duplicates are rejected | Source evidence remains report-only |
+| Source-audit resource exhaustion | Archive reads, decompression, YAML parsing, and declaration counts have explicit limits | Packages exceeding the audit limits cannot provide source evidence |
+
+Source auditing does not use general package extraction. For `.conda`
+packages, the original package filename selects the exact info component.
+The {ref}`source-audit-limits` apply even when package publication evidence is
+valid. These checks limit archive and recipe processing without changing signer
+authorization.
 
 ## Offline risk
 

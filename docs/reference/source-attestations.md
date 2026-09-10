@@ -19,6 +19,53 @@ If a precondition fails, `source_evidence` contains an
 `evidence-unavailable` result. Source evidence never substitutes for package
 publication verification.
 
+## Archive inspection
+
+The auditor copies the retained archive to a temporary snapshot and checks its
+SHA-256 against the verified package digest before inspecting it. It reads only
+regular rendered-recipe and embedded-bundle files, without general package
+extraction. For `.conda` packages, the original package filename selects the
+exact `info-<package-filename-without-.conda>.tar.zst` component.
+
+Unsafe archive paths are rejected. Selected recipe and bundle entries must be
+regular files with unique paths. Links and special files at those paths are
+invalid. Unrelated members are never copied or used as evidence. A malformed
+archive, including an invalid bzip2 stream, produces an `invalid` source result.
+A missing or unreadable archive produces `evidence-unavailable`.
+
+Sparse files are unsupported. Skipped regular-file payload still counts toward
+the expanded-byte limit but does not consume the tar metadata budget.
+
+(source-audit-limits)=
+## Source-audit limits
+
+The fixed limits apply only to source auditing and do not restrict package
+installation. Embedded bundles use the existing
+`plugins.conda_sigstore.max_sidecar_bytes` setting. None of these limits
+authorizes a signer.
+
+| Input | Maximum | Result when exceeded |
+| --- | --- | --- |
+| Compressed retained package archive | 4 GiB | `evidence-unavailable` |
+| Expanded tar stream, including headers and skipped payload in legacy `.tar.bz2` packages | 256 MiB | `invalid` |
+| Tar parser reads outside regular-file payload reads | 16 MiB | `invalid` |
+| Tar members | 10,000 | `invalid` |
+| One ZIP metadata read | 1 MiB | `invalid` |
+| ZIP entries | 16 | `invalid` |
+| Zstandard decoder window | 64 MiB | `invalid` |
+| Rendered recipe | 1 MiB of UTF-8 bytes | `invalid` |
+| YAML collection nesting | 32 levels | `invalid` |
+| YAML parsing events | 10,000 | `invalid` |
+| Source mappings per recipe | 100 | `invalid` |
+| Publishers per source | 16 | `invalid` |
+| Embedded bundle descriptors per source | 32 | `invalid` |
+| Publisher and embedded bundle declarations combined across a recipe | 256 | `invalid` |
+| Each embedded bundle | Configured `max_sidecar_bytes` | `invalid` |
+
+YAML aliases are rejected. The auditor checks YAML events and nesting before
+constructing the recipe mapping, then counts publisher and bundle declarations
+before constructing source-attestation requirements.
+
 ## Rendered recipe declaration
 
 The rendered recipe may declare `attestation` on one or more URL sources:
@@ -64,9 +111,9 @@ issuer: https://token.actions.githubusercontent.com
 
 Both values must be nonempty strings. The issuer is compared exactly.
 
-For an identity beginning with `https://`, matching is case-insensitive and
-uses a repository boundary. An authenticated certificate identity matches
-when it is equal to the configured identity or continues it with `/` or `@`.
+For an identity beginning with `https://`, matching is case-insensitive. An
+authenticated certificate identity matches when it is equal to the configured
+identity or continues it with `/` or `@`.
 This lets a repository identity match its workflow SAN without also matching a
 similarly prefixed repository. Other identity forms, including email SANs, are
 compared exactly and case-sensitively.
