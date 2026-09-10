@@ -4,7 +4,7 @@
 It can also audit installed environments and, when explicitly enabled, reject a
 package before extraction when acceptable evidence is unavailable or invalid.
 
-The project is alpha software. Version 0.1.1 is distributed through PyPI. The
+The project is alpha software and is distributed through PyPI. The
 opt-in install integration requires the unreleased package-verifier API in
 [conda/conda#16518](https://github.com/conda/conda/pull/16518), and draft
 transport and source-evidence formats may still change incompatibly.
@@ -34,12 +34,12 @@ environment that owns the `conda` executable.
 
 conda 26.5 and newer include the
 [`conda-pypi`](https://conda.github.io/conda-pypi/quickstart/) plugin. For a
-standard conda installation, activate `base` and install 0.1.1 from PyPI as a
+standard conda installation, activate `base` and install 0.1.2 from PyPI as a
 conda package:
 
 ```console
 conda activate base
-conda pypi install "conda-sigstore==0.1.1"
+conda pypi install "conda-sigstore==0.1.2"
 ```
 
 If `conda pypi` is not available, follow the

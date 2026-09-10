@@ -301,9 +301,9 @@ The exact rendered-recipe input is defined in
 
 ## Source inspection failure
 
-When package publication, archive retention, extraction, or rendered-recipe
-parsing prevents a source requirement from being produced, the array contains
-this smaller variant:
+When package publication, archive retention, archive inspection, or
+rendered-recipe parsing prevents a source requirement from being produced, the
+array contains this smaller variant:
 
 ```json
 {

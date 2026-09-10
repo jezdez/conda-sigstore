@@ -1,11 +1,30 @@
 from __future__ import annotations
 
 import pytest
+from conda.common.serialize import yaml
 
+from conda_sigstore import source_attestations
 from conda_sigstore.source_attestations import (
     EmbeddedSourceBundle,
     SourceAttestationRequirement,
 )
+
+
+@pytest.fixture
+def source_declaration():
+    return {
+        "url": "https://example.org/source.tar.gz",
+        "sha256": "ab" * 32,
+        "attestation": {
+            "publishers": ["github:example/project"],
+            "verified": [
+                {
+                    "path": "attestations/source.sigstore.json",
+                    "sha256": "cd" * 32,
+                }
+            ],
+        },
+    }
 
 
 @pytest.mark.parametrize(
@@ -124,3 +143,138 @@ def test_recipe_ignores_source_without_attestation() -> None:
         )
         == ()
     )
+
+
+@pytest.mark.parametrize(
+    ("field", "limit_name", "message"),
+    [
+        (
+            "publishers",
+            "MAX_SOURCE_PUBLISHERS",
+            "too many source attestation publishers",
+        ),
+        ("verified", "MAX_SOURCE_BUNDLES", "too many source attestation bundles"),
+    ],
+)
+def test_source_requirement_limits_declarations_before_parsing(
+    monkeypatch, source_declaration, field, limit_name, message
+):
+    monkeypatch.setattr(source_attestations, limit_name, 2)
+    source_declaration["attestation"][field] = [None] * 3
+    with pytest.raises(ValueError, match=message):
+        SourceAttestationRequirement.from_source(source_declaration, 0)
+
+
+@pytest.mark.parametrize(
+    ("field", "limit_name", "attribute"),
+    [
+        ("publishers", "MAX_SOURCE_PUBLISHERS", "publishers"),
+        ("verified", "MAX_SOURCE_BUNDLES", "bundles"),
+    ],
+)
+def test_source_requirement_accepts_declarations_at_limit(
+    monkeypatch, source_declaration, field, limit_name, attribute
+):
+    monkeypatch.setattr(source_attestations, limit_name, 2)
+    source_declaration["attestation"][field] *= 2
+    requirement = SourceAttestationRequirement.from_source(source_declaration, 0)
+    assert len(getattr(requirement, attribute)) == 2
+
+
+def test_recipe_limits_source_count_before_parsing(monkeypatch):
+    monkeypatch.setattr(source_attestations, "MAX_RECIPE_SOURCES", 2)
+    with pytest.raises(ValueError, match="too many recipe sources"):
+        SourceAttestationRequirement.from_recipe({"source": [None] * 3})
+
+
+def test_recipe_accepts_sources_at_limit(monkeypatch, source_declaration):
+    monkeypatch.setattr(source_attestations, "MAX_RECIPE_SOURCES", 2)
+    requirements = SourceAttestationRequirement.from_recipe(
+        {"source": [source_declaration] * 2}
+    )
+    assert [requirement.source_index for requirement in requirements] == [0, 1]
+
+
+@pytest.mark.parametrize("field", ["publishers", "verified"])
+def test_recipe_limits_aggregate_declarations_before_parsing(
+    monkeypatch, source_declaration, field
+):
+    monkeypatch.setattr(source_attestations, "MAX_RECIPE_DECLARATIONS", 3)
+    source_declaration["attestation"][field] = [None]
+    with pytest.raises(ValueError, match="too many source attestation declarations"):
+        SourceAttestationRequirement.from_recipe({"source": [source_declaration] * 2})
+
+
+def test_recipe_accepts_aggregate_declarations_at_limit(
+    monkeypatch, source_declaration
+):
+    monkeypatch.setattr(source_attestations, "MAX_RECIPE_DECLARATIONS", 4)
+    requirements = SourceAttestationRequirement.from_recipe(
+        {"source": [source_declaration] * 2}
+    )
+    assert len(requirements) == 2
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        "source: &source {url: 'https://example.org/source'}\nother: *source\n",
+        "source: &source {nested: *source}\n",
+    ],
+    ids=["reused-alias", "recursive-alias"],
+)
+def test_recipe_yaml_rejects_aliases_before_loading(monkeypatch, payload):
+    def unexpected_load(_payload):
+        pytest.fail("YAML aliases reached the recipe object loader")
+
+    monkeypatch.setattr(yaml, "loads", unexpected_load)
+    with pytest.raises(ValueError, match="YAML aliases are not supported"):
+        SourceAttestationRequirement.from_yaml(payload)
+
+
+@pytest.mark.parametrize(
+    ("limit_name", "limit", "payload", "message"),
+    [
+        ("MAX_RECIPE_YAML_EVENTS", 4, "source: {}\n", "too many YAML events"),
+        (
+            "MAX_RECIPE_YAML_DEPTH",
+            2,
+            "source: {nested: {child: 1}}\n",
+            "nested too deeply",
+        ),
+    ],
+)
+def test_recipe_yaml_limits_structure_before_loading(
+    monkeypatch, limit_name, limit, payload, message
+):
+    def unexpected_load(_payload):
+        pytest.fail("oversized YAML structure reached the recipe object loader")
+
+    monkeypatch.setattr(source_attestations, limit_name, limit)
+    monkeypatch.setattr(yaml, "loads", unexpected_load)
+    with pytest.raises(ValueError, match=message):
+        SourceAttestationRequirement.from_yaml(payload)
+
+
+def test_recipe_yaml_accepts_plain_declarations(source_declaration):
+    payload = "\n".join(
+        [
+            "source:",
+            "  url: https://example.org/source.tar.gz",
+            "  sha256: " + "ab" * 32,
+            "  attestation:",
+            "    publishers: ['github:example/project']",
+            "    verified:",
+            "      - path: attestations/source.sigstore.json",
+            "        sha256: " + "cd" * 32,
+        ]
+    )
+    assert SourceAttestationRequirement.from_yaml(payload) == (
+        SourceAttestationRequirement.from_source(source_declaration, 0),
+    )
+
+
+@pytest.mark.parametrize("payload", ["[]", "null", "source.tar.gz"])
+def test_recipe_yaml_requires_mapping(payload):
+    with pytest.raises(ValueError, match="rendered recipe must be an object"):
+        SourceAttestationRequirement.from_yaml(payload)

@@ -14099,6 +14099,7 @@ packages:
 - pypi: ./
   name: conda-sigstore
   requires_dist:
+  - backports-zstd>=1.0.0 ; python_full_version < '3.14'
   - cryptography>=42
   - pyasn1~=0.6
   - rich>=13

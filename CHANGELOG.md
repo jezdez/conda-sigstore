@@ -7,6 +7,20 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-09-10
+
+### Fixed
+
+- Inspect source-audit evidence through bounded reads of regular recipe and
+  bundle files from a digest-checked archive snapshot, without general package
+  extraction. Select the exact `.conda` info component using the original
+  package filename.
+- Reject unsafe archive paths, links or special files at evidence paths,
+  duplicate evidence files, malformed package streams, and archive expansion
+  beyond source-audit limits.
+- Bound rendered YAML parsing and source-attestation declaration counts before
+  constructing requirements.
+
 ## [0.1.1] - 2026-09-09
 
 ### Changed
@@ -83,6 +97,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Expanded the live Prefix interoperability check into a real strict
   pre-extraction installation followed by an environment audit.
 
-[Unreleased]: https://github.com/jezdez/conda-sigstore/compare/0.1.1...HEAD
+[Unreleased]: https://github.com/jezdez/conda-sigstore/compare/0.1.2...HEAD
+[0.1.2]: https://github.com/jezdez/conda-sigstore/compare/0.1.1...0.1.2
 [0.1.1]: https://github.com/jezdez/conda-sigstore/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/jezdez/conda-sigstore/releases/tag/0.1.0

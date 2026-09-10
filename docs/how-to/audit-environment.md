@@ -69,6 +69,12 @@ and a retained archive. See
 [Source-attestation declarations](../reference/source-attestations.md) for the
 recipe syntax, supported publisher forms, path rules, and result fields.
 
+The auditor checks a temporary archive snapshot against the verified package
+digest and reads only regular recipe and embedded-bundle files. It does not
+perform general package extraction. Packages that exceed the
+{ref}`source-audit-limits` produce an `invalid` or `evidence-unavailable` source
+result, depending on the input limit.
+
 Source and provenance evidence remain separate from package publication. They
 do not authorize the package signer.
 

@@ -135,31 +135,24 @@ def source_audit(
 ) -> list[dict[str, object]]:
     import conda_package_handling.api
 
-    package_bytes = b"retained package archive"
-    archive = tmp_path / "retained.conda"
-    archive.write_bytes(package_bytes)
-    package_sha256 = hashlib.sha256(package_bytes).hexdigest()
     record = SimpleNamespace(fn="pkg-1-0.conda")
+    source = tmp_path / "source"
+    recipe_root = source / "info" / "recipe"
+    recipe_root.mkdir(parents=True)
+    (recipe_root / "rendered_recipe.yaml").write_text(json.dumps(rendered_recipe))
+    for relative, body in bundle_files.items():
+        path = recipe_root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(body)
+    conda_package_handling.api.create(source, None, record.fn, tmp_path)
+    archive = tmp_path / record.fn
+    package_sha256 = hashlib.sha256(archive.read_bytes()).hexdigest()
     monkeypatch.setattr(
         EnvironmentAuditor,
         "retained_archive",
         staticmethod(lambda _record: archive),
     )
 
-    def extract_info(source: str, *, dest_dir: str, components: str) -> None:
-        assert components == "info"
-        snapshot = Path(source)
-        assert snapshot != archive
-        assert hashlib.sha256(snapshot.read_bytes()).hexdigest() == package_sha256
-        recipe_root = Path(dest_dir) / "info" / "recipe"
-        recipe_root.mkdir(parents=True)
-        (recipe_root / "rendered_recipe.yaml").write_text(json.dumps(rendered_recipe))
-        for relative, body in bundle_files.items():
-            path = recipe_root / relative
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(body)
-
-    monkeypatch.setattr(conda_package_handling.api, "extract", extract_info)
     verifier = FakeVerifier(
         identities,
         payloads or {body: statement() for body in bundle_files.values()},
@@ -518,7 +511,7 @@ def test_enforces_embedded_bundle_size_limit(
     )[0]
 
     assert report["status"] == "invalid"
-    assert "exceeds 4 bytes" in report["bundles"][0]["failure"]
+    assert "exceeds 4 bytes" in report["failure"]
 
 
 def test_bounds_rendered_recipe_before_parsing(
@@ -577,7 +570,7 @@ def test_hashes_archive_before_extraction(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    import conda_package_handling.api
+    from conda_sigstore.source_archive import SourceArchive
 
     archive = tmp_path / "retained.conda"
     archive.write_bytes(b"changed")
@@ -587,8 +580,8 @@ def test_hashes_archive_before_extraction(
         staticmethod(lambda _record: archive),
     )
     monkeypatch.setattr(
-        conda_package_handling.api,
-        "extract",
+        SourceArchive,
+        "extract_recipe",
         lambda *_args, **_kwargs: pytest.fail("archive must be hashed first"),
     )
     auditor = EnvironmentAuditor(SigstoreSettings(), FakeVerifier({}, {}))
@@ -607,9 +600,8 @@ def test_source_audit_bounds_retained_package_archive(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    import conda_package_handling.api
-
     from conda_sigstore import audit
+    from conda_sigstore.source_archive import SourceArchive
 
     archive = tmp_path / "retained.conda"
     archive.write_bytes(b"oversized")
@@ -620,8 +612,8 @@ def test_source_audit_bounds_retained_package_archive(
         staticmethod(lambda _record: archive),
     )
     monkeypatch.setattr(
-        conda_package_handling.api,
-        "extract",
+        SourceArchive,
+        "extract_recipe",
         lambda *_args, **_kwargs: pytest.fail("oversized archive must not be parsed"),
     )
     auditor = EnvironmentAuditor(SigstoreSettings(), FakeVerifier({}, {}))

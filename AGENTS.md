@@ -32,6 +32,8 @@
   - `cache.py` owns content-addressed sidecars and artifact-digest references
     used only to rediscover adjacent evidence for fresh verification.
   - `audit.py` owns installed-environment and source-evidence audit orchestration.
+  - `source_archive.py` owns bounded inspection of digest-checked package
+    snapshots and copies only regular recipe and embedded-bundle files.
   - `source_attestations.py` owns draft recipe declarations, embedded paths,
     bundle verification, and publisher matching.
   - `provenance.py` owns factual parsing of separate provenance evidence.
