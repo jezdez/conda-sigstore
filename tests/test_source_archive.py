@@ -114,6 +114,25 @@ def test_real_source_archive_preserves_recipe(archive_factory, audit_archive):
     assert audit_archive(archive_factory([(member, body)])) == []
 
 
+def test_source_archive_rejects_unsupported_suffix(tmp_path, extract_archive):
+    archive = tmp_path / "pkg-1-0.zip"
+    archive.write_bytes(b"")
+    with pytest.raises(ValueError, match="retained archive is not a conda package"):
+        extract_archive(archive)
+
+
+def test_source_archive_preserves_existing_destination(
+    archive_factory, regular_member, extract_archive, tmp_path
+):
+    output = tmp_path / "extracted/info/recipe/rendered_recipe.yaml"
+    output.parent.mkdir(parents=True)
+    output.write_bytes(b"original")
+    archive = archive_factory([regular_member(body=b"replacement")])
+    with pytest.raises(FileExistsError):
+        extract_archive(archive)
+    assert output.read_bytes() == b"original"
+
+
 def test_source_archive_cannot_write_through_hardlink(
     archive_factory, audit_archive, tmp_path
 ):
@@ -224,26 +243,32 @@ def test_source_archive_counts_unselected_members(
 
 
 @pytest.mark.parametrize(
-    ("name", "limits", "message"),
+    ("name", "limit_name", "message"),
     [
         (
             "info/recipe/rendered_recipe.yaml",
-            {"max_recipe_bytes": 3},
+            "max_recipe_bytes",
             "rendered recipe exceeds",
         ),
         (
             "info/recipe/attestations/source.sigstore.json",
-            {"max_bundle_bytes": 3},
+            "max_bundle_bytes",
             "embedded bundle exceeds",
         ),
     ],
 )
+@pytest.mark.parametrize("limit", [3, 4], ids=["over-limit", "exact-limit"])
 def test_source_archive_bounds_each_recipe_file(
-    archive_factory, regular_member, extract_archive, name, limits, message
+    archive_factory, regular_member, extract_archive, name, limit_name, message, limit
 ):
     archive = archive_factory([regular_member(name, b"1234")])
-    with pytest.raises(ValueError, match=message):
-        extract_archive(archive, **limits)
+    limits = {limit_name: limit}
+    if limit == 3:
+        with pytest.raises(ValueError, match=message):
+            extract_archive(archive, **limits)
+    else:
+        destination = extract_archive(archive, **limits)
+        assert (destination / name).read_bytes() == b"1234"
 
 
 @pytest.mark.parametrize(
@@ -339,8 +364,16 @@ def test_source_archive_ignores_payload_symlinks_without_writing_them(
     assert outside.read_bytes() == b"original"
 
 
-def test_source_archive_normalizes_malformed_tar_errors(archive_factory, audit_archive):
-    report = audit_archive(archive_factory(raw_tar=b"not a tar header" + b"\0" * 10240))
+@pytest.mark.parametrize("malformation", ["invalid-header", "truncated-body"])
+def test_source_archive_normalizes_malformed_tar_errors(
+    archive_factory, regular_member, audit_archive, malformation
+):
+    if malformation == "invalid-header":
+        raw_tar = b"not a tar header" + b"\0" * 10240
+    else:
+        member, body = regular_member(body=b"1234")
+        raw_tar = member.tobuf() + body[:-1]
+    report = audit_archive(archive_factory(raw_tar=raw_tar))
     assert report[0]["status"] == "invalid"
     assert report[0]["failure"] == "retained package archive is malformed"
 

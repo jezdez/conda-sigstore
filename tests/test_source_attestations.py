@@ -89,19 +89,23 @@ def test_publisher_rejects_malformed_value(
         ),
     ],
 )
+@pytest.mark.parametrize("from_recipe", [False, True], ids=["source", "recipe"])
 def test_source_requirement_rejects_malformed_attestation(
     value: object,
     message: str,
+    from_recipe: bool,
 ) -> None:
-    with pytest.raises(ValueError, match=message):
-        SourceAttestationRequirement.from_source(
-            {
-                "url": "https://example.org/source.tar.gz",
-                "sha256": "ab" * 32,
-                "attestation": value,
-            },
-            0,
-        )
+    source = {
+        "url": "https://example.org/source.tar.gz",
+        "sha256": "ab" * 32,
+        "attestation": value,
+    }
+    if from_recipe:
+        with pytest.raises(ValueError, match=message):
+            SourceAttestationRequirement.from_recipe({"source": source})
+    else:
+        with pytest.raises(ValueError, match=message):
+            SourceAttestationRequirement.from_source(source, 0)
 
 
 @pytest.mark.parametrize(
@@ -235,6 +239,8 @@ def test_recipe_yaml_rejects_aliases_before_loading(monkeypatch, payload):
 @pytest.mark.parametrize(
     ("limit_name", "limit", "payload", "message"),
     [
+        ("MAX_RENDERED_RECIPE_BYTES", 8, "about: a\n", "YAML byte limit"),
+        ("MAX_RENDERED_RECIPE_BYTES", 9, "about: é\n", "YAML byte limit"),
         ("MAX_RECIPE_YAML_EVENTS", 4, "source: {}\n", "too many YAML events"),
         (
             "MAX_RECIPE_YAML_DEPTH",
@@ -254,6 +260,16 @@ def test_recipe_yaml_limits_structure_before_loading(
     monkeypatch.setattr(yaml, "loads", unexpected_load)
     with pytest.raises(ValueError, match=message):
         SourceAttestationRequirement.from_yaml(payload)
+
+
+@pytest.mark.parametrize(
+    "payload", ["about: a\n", "about: é\n"], ids=["ascii", "utf-8"]
+)
+def test_recipe_yaml_accepts_exact_byte_limit(monkeypatch, payload):
+    monkeypatch.setattr(
+        source_attestations, "MAX_RENDERED_RECIPE_BYTES", len(payload.encode("utf-8"))
+    )
+    assert SourceAttestationRequirement.from_yaml(payload) == ()
 
 
 def test_recipe_yaml_accepts_plain_declarations(source_declaration):
