@@ -56,6 +56,8 @@ jobs:
         exclude:
           - os: ubuntu-latest
             python-minor: "13"
+          - os: ubuntu-latest
+            python-minor: "14"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -96,9 +98,15 @@ jobs:
         run: pixi run --locked --platform win-64 -e "$env:PIXI_ENVIRONMENT" test
 
   coverage:
-    name: ubuntu-latest, Python 3.13
+    name: ubuntu-latest, Python 3.${{ matrix.python-minor }}
     runs-on: ubuntu-latest
     environment: codecov
+    env:
+      PIXI_ENVIRONMENT: test-py3${{ matrix.python-minor }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-minor: ["13", "14"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -107,10 +115,10 @@ jobs:
       - uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
         with:
           pixi-version: v0.76.1
-          environments: test-py313
+          environments: test-py3${{ matrix.python-minor }}
           cache: true
       - name: Run tests with coverage
-        run: pixi run --locked -e test-py313 test-cov
+        run: pixi run --locked -e "$PIXI_ENVIRONMENT" test-cov
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         env:

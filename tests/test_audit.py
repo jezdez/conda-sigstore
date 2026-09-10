@@ -596,6 +596,45 @@ def test_hashes_archive_before_extraction(
     assert "verified package digest" in str(report[0]["failure"])
 
 
+def test_source_audit_inspects_verified_snapshot(monkeypatch, tmp_path):
+    from conda_sigstore.source_archive import SourceArchive
+
+    archive = tmp_path / "pkg-1-0.conda"
+    extract_recipe = SourceArchive.extract_recipe
+    inspected = []
+
+    def inspect_snapshot(snapshot, *args, **kwargs):
+        assert snapshot.path != archive
+        assert snapshot.filename == archive.name
+        assert (
+            hashlib.sha256(snapshot.path.read_bytes()).digest()
+            == hashlib.sha256(archive.read_bytes()).digest()
+        )
+        archive.write_bytes(b"replaced after snapshot")
+        inspected.append(snapshot.path)
+        return extract_recipe(snapshot, *args, **kwargs)
+
+    monkeypatch.setattr(SourceArchive, "extract_recipe", inspect_snapshot)
+    body = "bundle"
+    path = "attestations/source.sigstore.json"
+    report = source_audit(
+        monkeypatch,
+        tmp_path,
+        rendered_recipe=recipe(
+            ["github:example/project"],
+            [indexed_bundle(path, body)],
+        ),
+        bundle_files={path: body},
+        identities={
+            body: SignerIdentity("https://github.com/example/project", GITHUB_ISSUER)
+        },
+    )
+
+    assert len(inspected) == 1
+    assert report[0]["status"] == "verified"
+    assert archive.read_bytes() == b"replaced after snapshot"
+
+
 def test_source_audit_bounds_retained_package_archive(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
