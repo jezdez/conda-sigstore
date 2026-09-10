@@ -168,7 +168,7 @@ python-build = ">=1.2"
 twine = ">=6.2"
 
 [tool.pixi.environments]
-dev = {features = ["dev"], solve-group = "default"}
+dev = {features = ["dev", "py311"], solve-group = "test-py311"}
 docs = {features = ["docs"], solve-group = "default"}
 release = {features = ["release"], no-default-feature = true}
 test = {features = ["test"], solve-group = "default"}

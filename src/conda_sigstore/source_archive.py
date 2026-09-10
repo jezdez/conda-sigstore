@@ -16,8 +16,7 @@ from zipfile import ZIP_STORED, BadZipFile, ZipFile
 if sys.version_info >= (3, 14):
     from compression import zstd
 else:
-    # The conda backport has no modules in the Python 3.14 dev environment.
-    from backports import zstd  # ty: ignore[unresolved-import]
+    from backports import zstd
 
 if TYPE_CHECKING:
     from pathlib import Path
